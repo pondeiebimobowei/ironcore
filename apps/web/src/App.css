@@ -262,6 +262,12 @@ button[type="submit"] {
   color: #ffffff;
 }
 
+button:disabled,
+button[disabled] {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
 .icon-button {
   position: relative;
   width: 38px;
@@ -571,6 +577,15 @@ td span,
 .dashboard-state-error {
   border-color: #f3b6b0;
   background: #fffafa;
+}
+
+.compact-state {
+  margin-bottom: 16px;
+  padding: 14px 16px;
+}
+
+.compact-state strong {
+  font-size: 15px;
 }
 
 .toolbar,
@@ -939,6 +954,7 @@ td small {
 
 .task-card-meta {
   justify-content: flex-end;
+  flex-wrap: wrap;
 }
 
 .task-card-meta > div {
@@ -957,6 +973,11 @@ td small {
 }
 
 .task-card-meta .button-link {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.task-card-meta .secondary-button {
   flex: 0 0 auto;
   white-space: nowrap;
 }

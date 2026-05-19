@@ -14,6 +14,12 @@ type UrgencyGroup = {
   tasks: Task[];
 };
 
+type RecoveryQueueProps = {
+  tasks: Task[];
+  completingTaskId?: string | null;
+  onCompleteTask: (taskId: string) => Promise<void>;
+};
+
 const urgentTaskTypes = new Set<TaskType>([
   "VERIFY_PAYMENT",
   "RESOLVE_OVERDUE_STATUS",
@@ -108,7 +114,11 @@ function sortTasks(tasks: Task[]) {
   });
 }
 
-export function RecoveryQueue({ tasks }: { tasks: Task[] }) {
+export function RecoveryQueue({
+  tasks,
+  completingTaskId,
+  onCompleteTask,
+}: RecoveryQueueProps) {
   const groups: UrgencyGroup[] = [
     {
       key: "dueNow",
@@ -205,6 +215,16 @@ export function RecoveryQueue({ tasks }: { tasks: Task[] }) {
                       <Link to={action.to} className="button-link">
                         {action.label}
                       </Link>
+                      <button
+                        type="button"
+                        className="secondary-button"
+                        disabled={Boolean(completingTaskId)}
+                        onClick={() => void onCompleteTask(task.id)}
+                      >
+                        {completingTaskId === task.id
+                          ? "Completing..."
+                          : "Complete"}
+                      </button>
                     </div>
                   </article>
                 );
