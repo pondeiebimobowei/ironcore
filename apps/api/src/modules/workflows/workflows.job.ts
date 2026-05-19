@@ -7,10 +7,8 @@ import {
   WorkflowStatus,
   WorkflowType,
 } from '@prisma/client';
-import {
-  MessagingProvider,
-  MESSAGING_PROVIDER,
-} from '../../lib/messaging/provider';
+import { MESSAGING_PROVIDER } from '../../lib/messaging/provider';
+import type { MessagingProvider } from '../../lib/messaging/provider';
 import { PrismaService } from '../database/prisma.service';
 import { defaultWorkflowTemplates } from './default-workflow-templates';
 
@@ -43,7 +41,9 @@ export class WorkflowsJob {
     private readonly messagingProvider: MessagingProvider,
   ) {}
 
-  async runDueWorkflowSteps(asOf: Date = new Date()): Promise<WorkflowJobResult> {
+  async runDueWorkflowSteps(
+    asOf: Date = new Date(),
+  ): Promise<WorkflowJobResult> {
     const [lock] = await this.prisma.$queryRaw<AdvisoryLockResult[]>`
       SELECT pg_try_advisory_lock(${WORKFLOW_ADVISORY_LOCK_ID}) AS acquired
     `;

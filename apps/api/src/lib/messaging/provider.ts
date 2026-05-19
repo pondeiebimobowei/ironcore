@@ -6,6 +6,7 @@ export type SendMessageInput = {
 
 export type SendMessageResult = {
   providerMessageId?: string;
+  messageLogId?: string;
   status: 'sent' | 'failed';
   error?: string;
 };

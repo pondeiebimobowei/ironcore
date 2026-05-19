@@ -1,10 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import {
-  MessageDirection,
-  MessageStatus,
-  TimelineEventType,
-} from '@prisma/client';
-import { PrismaService } from '../../modules/database/prisma.service';
+import { MessageStatus } from '@prisma/client';
+import { MessageLogService } from './message-log.service';
 import type {
   MessagingProvider,
   SendMessageInput,
@@ -20,7 +16,7 @@ type MessageMetadata = {
 
 @Injectable()
 export class MockMessagingProvider implements MessagingProvider {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly messageLogService: MessageLogService) {}
 
   async sendMessage(input: SendMessageInput): Promise<SendMessageResult> {
     const metadata = input.metadata as MessageMetadata | undefined;
@@ -38,52 +34,40 @@ export class MockMessagingProvider implements MessagingProvider {
     }
 
     if (shouldFail) {
-      await this.prisma.messageLog.create({
-        data: {
-          organizationId,
-          memberId,
-          workflowStepId,
-          phoneNumber: input.to,
-          direction: MessageDirection.OUTBOUND,
-          content: input.message,
-          status: MessageStatus.FAILED,
-          errorMessage: 'Mock messaging failure',
-        },
-      });
-
-      return { status: 'failed', error: 'Mock messaging failure' };
-    }
-
-    const sentAt = new Date();
-    const messageLog = await this.prisma.messageLog.create({
-      data: {
+      const messageLog = await this.messageLogService.createOutboundMessageLog({
         organizationId,
         memberId,
         workflowStepId,
         phoneNumber: input.to,
-        direction: MessageDirection.OUTBOUND,
         content: input.message,
-        status: MessageStatus.SENT,
-        sentAt,
+        status: MessageStatus.FAILED,
+        errorMessage: 'Mock messaging failure',
+      });
+
+      return {
+        providerMessageId,
+        messageLogId: messageLog.id,
+        status: 'failed',
+        error: 'Mock messaging failure',
+      };
+    }
+
+    const sentAt = new Date();
+    const messageLog = await this.messageLogService.createOutboundMessageLog({
+      organizationId,
+      memberId,
+      workflowStepId,
+      phoneNumber: input.to,
+      content: input.message,
+      status: MessageStatus.SENT,
+      sentAt,
+      timelineMetadata: {
+        provider: 'mock',
+        providerMessageId,
       },
     });
 
-    await this.prisma.timelineEvent.create({
-      data: {
-        organizationId,
-        memberId,
-        type: TimelineEventType.MESSAGE_SENT,
-        metadata: {
-          messageLogId: messageLog.id,
-          workflowStepId,
-          provider: 'mock',
-          providerMessageId,
-        },
-        createdAt: sentAt,
-      },
-    });
-
-    return { providerMessageId, status: 'sent' };
+    return { providerMessageId, messageLogId: messageLog.id, status: 'sent' };
   }
 
   private stringValue(value: unknown) {
