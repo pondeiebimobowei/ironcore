@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
   JobRunStatus,
+  MessageStatus,
   TaskType,
   TimelineEventType,
   WorkflowStepStatus,
@@ -93,6 +94,18 @@ export class WorkflowsJob {
         processedCount += 1;
 
         try {
+          if (await this.hasSentMessageLog(step.id)) {
+            await this.prisma.workflowStep.update({
+              where: { id: step.id },
+              data: {
+                status: WorkflowStepStatus.SENT,
+                executedAt: step.executedAt ?? new Date(),
+                errorMessage: null,
+              },
+            });
+            continue;
+          }
+
           const message = this.renderMessage(step.messageTemplate, {
             firstName: step.workflow.member.firstName,
           });
@@ -278,6 +291,18 @@ export class WorkflowsJob {
     scheduledAt.setDate(scheduledAt.getDate() + dayOffset);
 
     return scheduledAt;
+  }
+
+  private async hasSentMessageLog(workflowStepId: string) {
+    const sentLog = await this.prisma.messageLog.findFirst({
+      where: {
+        workflowStepId,
+        status: MessageStatus.SENT,
+      },
+      select: { id: true },
+    });
+
+    return sentLog != null;
   }
 
   private renderMessage(
