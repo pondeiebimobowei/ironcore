@@ -8,6 +8,9 @@ import { MembersPage } from "../pages/members/MembersPage";
 import { PaymentDetailPage } from "../pages/payments/PaymentDetailPage";
 import { PaymentsPage } from "../pages/payments/PaymentsPage";
 import { RecoveryQueuePage } from "../pages/recovery/RecoveryQueuePage";
+import { BillingPage } from "../pages/settings/BillingPage";
+import { OrganizationProfilePage } from "../pages/settings/OrganizationProfilePage";
+import { SettingsPage } from "../pages/settings/SettingsPage";
 import { WorkflowsPage } from "../pages/workflows/WorkflowsPage";
 import { ProtectedRoute } from "./ProtectedRoute";
 
@@ -27,6 +30,12 @@ export const router = createBrowserRouter([
           { path: "/payments/:paymentId", element: <PaymentDetailPage /> },
           { path: "/recovery", element: <RecoveryQueuePage /> },
           { path: "/workflows", element: <WorkflowsPage /> },
+          { path: "/settings", element: <SettingsPage /> },
+          {
+            path: "/settings/organization",
+            element: <OrganizationProfilePage />,
+          },
+          { path: "/settings/billing", element: <BillingPage /> },
         ],
       },
       { path: "*", element: <Navigate to="/" replace /> },

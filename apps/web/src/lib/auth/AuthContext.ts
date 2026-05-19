@@ -34,6 +34,7 @@ export type AuthContextValue = {
   isInitializing: boolean;
   login: (input: LoginInput) => Promise<void>;
   signup: (input: SignupInput) => Promise<void>;
+  updateOrganization: (organization: AuthOrganization) => void;
   refresh: () => Promise<boolean>;
   logout: () => Promise<void>;
 };

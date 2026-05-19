@@ -8,6 +8,7 @@ const navigationItems = [
   { to: "/recovery", label: "Recovery Queue", icon: "R", badge: "12" },
   { to: "/payments", label: "Payments", icon: "P", badge: "7" },
   { to: "/workflows", label: "Workflows", icon: "W" },
+  { to: "/settings", label: "Settings", icon: "S" },
 ];
 
 export function AppLayout() {

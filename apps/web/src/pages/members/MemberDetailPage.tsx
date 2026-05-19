@@ -23,6 +23,7 @@ export function MemberDetailPage() {
     }
 
     try {
+      setError("");
       setMember(await getMember(memberId));
     } catch {
       setError("Could not load this member.");
@@ -48,7 +49,10 @@ export function MemberDetailPage() {
   if (error) {
     return (
       <main className="page">
-        <p className="form-errors">{error}</p>
+        <section className="dashboard-state dashboard-state-error">
+          <strong>{error}</strong>
+          <span>Go back to members and try opening this record again.</span>
+        </section>
       </main>
     );
   }
@@ -56,7 +60,10 @@ export function MemberDetailPage() {
   if (!member) {
     return (
       <main className="page">
-        <p>Loading member...</p>
+        <section className="dashboard-state">
+          <strong>Loading member</strong>
+          <span>Fetching membership, payments, tasks, and timeline.</span>
+        </section>
       </main>
     );
   }
@@ -95,6 +102,12 @@ export function MemberDetailPage() {
         <div className="detail-stack">
           <section>
             <h2>Memberships</h2>
+            {member.memberships.length === 0 ? (
+              <section className="empty-state">
+                <strong>No memberships</strong>
+                <span>This member does not have a membership yet.</span>
+              </section>
+            ) : null}
             {member.memberships.map((membership) => (
               <div key={membership.id} className="line-item">
                 <strong>{membership.plan?.name ?? "Unassigned plan"}</strong>
@@ -107,6 +120,12 @@ export function MemberDetailPage() {
           </section>
           <section>
             <h2>Payments</h2>
+            {member.payments.length === 0 ? (
+              <section className="empty-state">
+                <strong>No payments</strong>
+                <span>Submitted transfer proofs will appear here.</span>
+              </section>
+            ) : null}
             {member.payments.map((payment) => (
               <div key={payment.id} className="line-item">
                 <strong>{payment.status.replaceAll("_", " ")}</strong>
@@ -120,7 +139,12 @@ export function MemberDetailPage() {
         </div>
         <aside className="side-panel">
           <h2>Tasks</h2>
-          {member.tasks.length === 0 ? <p>No open tasks.</p> : null}
+          {member.tasks.length === 0 ? (
+            <section className="empty-state">
+              <strong>No open tasks</strong>
+              <span>This member has no pending follow-up work.</span>
+            </section>
+          ) : null}
           {member.tasks.map((task) => (
             <div key={task.id} className="line-item">
               <strong>{task.type.replaceAll("_", " ")}</strong>
@@ -128,6 +152,12 @@ export function MemberDetailPage() {
             </div>
           ))}
           <h2>Timeline</h2>
+          {member.timelineEvents.length === 0 ? (
+            <section className="empty-state">
+              <strong>No timeline events</strong>
+              <span>Member, payment, and workflow events will appear here.</span>
+            </section>
+          ) : null}
           {member.timelineEvents.map((event) => (
             <div key={event.id} className="line-item">
               <strong>{event.type.replaceAll("_", " ")}</strong>

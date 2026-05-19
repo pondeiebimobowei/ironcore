@@ -23,19 +23,21 @@ export function PaymentTable({ payments }: { payments: Payment[] }) {
         <tbody>
           {payments.map((payment) => (
             <tr key={payment.id}>
-              <td>
+              <td data-label="Member">
                 <Link to={`/payments/${payment.id}`} className="row-link">
                   {payment.member.firstName} {payment.member.lastName}
                 </Link>
                 <span>{payment.member.phoneNumber}</span>
               </td>
-              <td>
+              <td data-label="Status">
                 <PaymentStatusBadge status={payment.status} />
               </td>
-              <td>{payment.amountExpected}</td>
-              <td>{payment.amountPaid ?? "Pending"}</td>
-              <td>{payment.method.replaceAll("_", " ")}</td>
-              <td>{new Date(payment.submittedAt).toLocaleDateString()}</td>
+              <td data-label="Expected">{payment.amountExpected}</td>
+              <td data-label="Paid">{payment.amountPaid ?? "Pending"}</td>
+              <td data-label="Method">{payment.method.replaceAll("_", " ")}</td>
+              <td data-label="Submitted">
+                {new Date(payment.submittedAt).toLocaleDateString()}
+              </td>
             </tr>
           ))}
         </tbody>

@@ -26,6 +26,7 @@ export function MembersPage() {
     null,
   );
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
 
   const loadMembers = useCallback(async () => {
     try {
@@ -33,6 +34,8 @@ export function MembersPage() {
       setMembers(await listMembers({ search, status }));
     } catch {
       setError("Could not load members.");
+    } finally {
+      setIsLoading(false);
     }
   }, [search, status]);
 
@@ -286,8 +289,24 @@ export function MembersPage() {
             </select>
           </div>
         </div>
-        {error ? <p className="form-errors">{error}</p> : null}
-        <MemberTable members={visibleMembers} />
+        {error ? (
+          <section className="dashboard-state dashboard-state-error compact-state">
+            <strong>{error}</strong>
+            <span>Refresh the page or try again after the API is available.</span>
+          </section>
+        ) : isLoading ? (
+          <section className="dashboard-state compact-state">
+            <strong>Loading members</strong>
+            <span>Finding current members and lifecycle states.</span>
+          </section>
+        ) : visibleMembers.length === 0 ? (
+          <section className="empty-state">
+            <strong>No members match this view</strong>
+            <span>Import members or clear filters to populate the table.</span>
+          </section>
+        ) : (
+          <MemberTable members={visibleMembers} />
+        )}
       </section>
     </main>
   );

@@ -53,7 +53,10 @@ export function PaymentDetailPage() {
   if (error) {
     return (
       <main className="page">
-        <p className="form-errors">{error}</p>
+        <section className="dashboard-state dashboard-state-error">
+          <strong>{error}</strong>
+          <span>Go back to payments and try opening this record again.</span>
+        </section>
       </main>
     );
   }
@@ -61,7 +64,10 @@ export function PaymentDetailPage() {
   if (!payment) {
     return (
       <main className="page">
-        <p>Loading payment...</p>
+        <section className="dashboard-state">
+          <strong>Loading payment</strong>
+          <span>Fetching payment proof and member details.</span>
+        </section>
       </main>
     );
   }

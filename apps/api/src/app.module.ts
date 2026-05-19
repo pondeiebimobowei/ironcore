@@ -6,6 +6,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { JobsModule } from './modules/jobs/jobs.module';
 import { MembersModule } from './modules/members/members.module';
 import { MembershipsModule } from './modules/memberships/memberships.module';
+import { OrganizationsModule } from './modules/organizations/organizations.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { TasksModule } from './modules/tasks/tasks.module';
 import { WorkflowsModule } from './modules/workflows/workflows.module';
@@ -14,6 +15,7 @@ import { WorkflowsModule } from './modules/workflows/workflows.module';
   imports: [
     AuthModule,
     MembersModule,
+    OrganizationsModule,
     MembershipsModule,
     JobsModule,
     DashboardModule,

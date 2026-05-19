@@ -71,7 +71,7 @@ export function MemberTable({ members }: { members: MemberSummary[] }) {
 
             return (
               <tr key={member.id}>
-                <td className="member-cell">
+                <td className="member-cell" data-label="Member">
                   <span className="member-avatar" aria-hidden="true">
                     {member.firstName[0]}
                     {member.lastName?.[0] ?? ""}
@@ -83,14 +83,14 @@ export function MemberTable({ members }: { members: MemberSummary[] }) {
                     <small>{memberCode(member.id)}</small>
                   </span>
                 </td>
-                <td>
+                <td data-label="Status">
                   <span
                     className={`status status-${member.status.toLowerCase()}`}
                   >
                     {statusLabels[member.status] ?? member.status}
                   </span>
                 </td>
-                <td>
+                <td data-label="Plan">
                   {membership?.plan?.name ?? "Unassigned"}
                   <span>
                     {membership
@@ -98,7 +98,7 @@ export function MemberTable({ members }: { members: MemberSummary[] }) {
                       : "No active plan"}
                   </span>
                 </td>
-                <td>
+                <td data-label="Expiry Date">
                   {membership ? formatDate(membership.expiryDate) : "None"}
                   <span
                     className={
@@ -108,8 +108,8 @@ export function MemberTable({ members }: { members: MemberSummary[] }) {
                     {expiryDetail(membership?.expiryDate)}
                   </span>
                 </td>
-                <td>{member.phoneNumber}</td>
-                <td>
+                <td data-label="Phone">{member.phoneNumber}</td>
+                <td data-label="Last Payment">
                   {payment ? formatDate(payment.submittedAt) : "No payment"}
                   <span>
                     {payment
@@ -117,7 +117,7 @@ export function MemberTable({ members }: { members: MemberSummary[] }) {
                       : "Awaiting first payment"}
                   </span>
                 </td>
-                <td>
+                <td data-label="Actions">
                   <Link
                     to={`/members/${member.id}`}
                     className="table-action-button"

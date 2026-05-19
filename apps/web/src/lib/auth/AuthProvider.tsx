@@ -29,6 +29,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setOrganization(null);
   }, []);
 
+  const updateOrganization = useCallback((nextOrganization: AuthOrganization) => {
+    setOrganization(nextOrganization);
+  }, []);
+
   const refresh = useCallback(async () => {
     try {
       const response = await apiClient.post<AuthSession>("/api/auth/refresh");
@@ -68,13 +72,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         );
         applySession(response.data);
       },
+      updateOrganization,
       refresh,
       async logout() {
         await apiClient.post("/api/auth/logout").catch(() => undefined);
         clearSession();
       },
     }),
-    [applySession, clearSession, isInitializing, organization, refresh, user],
+    [
+      applySession,
+      clearSession,
+      isInitializing,
+      organization,
+      refresh,
+      updateOrganization,
+      user,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -58,15 +58,22 @@ export function WorkflowsPage() {
           <strong>{counts.steps}</strong>
         </div>
       </section>
-      <section className="workflow-grid">
-        {workflows.map((workflow) => (
-          <WorkflowTemplateCard
-            key={workflow.id}
-            workflow={workflow}
-            onStatusChange={handleStatusChange}
-          />
-        ))}
-      </section>
+      {workflows.length === 0 ? (
+        <section className="empty-state">
+          <strong>No workflow templates</strong>
+          <span>Default recovery sequences will appear here once configured.</span>
+        </section>
+      ) : (
+        <section className="workflow-grid">
+          {workflows.map((workflow) => (
+            <WorkflowTemplateCard
+              key={workflow.id}
+              workflow={workflow}
+              onStatusChange={handleStatusChange}
+            />
+          ))}
+        </section>
+      )}
     </main>
   );
 }

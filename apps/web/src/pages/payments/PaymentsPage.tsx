@@ -6,6 +6,7 @@ import type { Payment } from "../../features/payments/types";
 export function PaymentsPage() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
 
   const loadPayments = useCallback(async () => {
     try {
@@ -13,6 +14,8 @@ export function PaymentsPage() {
       setPayments(await listPayments());
     } catch {
       setError("Could not load payments.");
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
@@ -59,8 +62,19 @@ export function PaymentsPage() {
           <strong>{counts.rejected}</strong>
         </div>
       </section>
-      {error ? <p className="form-errors">{error}</p> : null}
-      <PaymentTable payments={payments} />
+      {error ? (
+        <section className="dashboard-state dashboard-state-error">
+          <strong>{error}</strong>
+          <span>Refresh the page or try again after the API is available.</span>
+        </section>
+      ) : isLoading ? (
+        <section className="dashboard-state">
+          <strong>Loading payments</strong>
+          <span>Finding submitted transfer proofs.</span>
+        </section>
+      ) : (
+        <PaymentTable payments={payments} />
+      )}
     </main>
   );
 }
