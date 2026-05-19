@@ -33,9 +33,6 @@ export function DashboardPage() {
   useEffect(() => {
     let active = true;
 
-    setIsLoading(true);
-    setErrorMessage(null);
-
     getDashboardSummary()
       .then((data) => {
         if (active) {
