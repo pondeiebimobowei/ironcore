@@ -7,6 +7,7 @@ import { JobsModule } from './modules/jobs/jobs.module';
 import { MembersModule } from './modules/members/members.module';
 import { MembershipsModule } from './modules/memberships/memberships.module';
 import { PaymentsModule } from './modules/payments/payments.module';
+import { WorkflowsModule } from './modules/workflows/workflows.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { PaymentsModule } from './modules/payments/payments.module';
     JobsModule,
     DashboardModule,
     PaymentsModule,
+    WorkflowsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
