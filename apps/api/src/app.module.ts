@@ -6,6 +6,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { JobsModule } from './modules/jobs/jobs.module';
 import { MembersModule } from './modules/members/members.module';
 import { MembershipsModule } from './modules/memberships/memberships.module';
+import { PaymentsModule } from './modules/payments/payments.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { MembershipsModule } from './modules/memberships/memberships.module';
     MembershipsModule,
     JobsModule,
     DashboardModule,
+    PaymentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

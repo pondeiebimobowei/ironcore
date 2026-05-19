@@ -5,6 +5,8 @@ import { SignupPage } from "../pages/auth/SignupPage";
 import { DashboardPage } from "../pages/dashboard/DashboardPage";
 import { MemberDetailPage } from "../pages/members/MemberDetailPage";
 import { MembersPage } from "../pages/members/MembersPage";
+import { PaymentDetailPage } from "../pages/payments/PaymentDetailPage";
+import { PaymentsPage } from "../pages/payments/PaymentsPage";
 import { ProtectedRoute } from "./ProtectedRoute";
 
 export const router = createBrowserRouter([
@@ -19,6 +21,8 @@ export const router = createBrowserRouter([
           { path: "/", element: <DashboardPage /> },
           { path: "/members", element: <MembersPage /> },
           { path: "/members/:memberId", element: <MemberDetailPage /> },
+          { path: "/payments", element: <PaymentsPage /> },
+          { path: "/payments/:paymentId", element: <PaymentDetailPage /> },
         ],
       },
       { path: "*", element: <Navigate to="/" replace /> },

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/unbound-method */
 import { JobRunStatus, MemberStatus, MembershipStatus } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { MembershipStateService } from '../memberships/membership-state.service';
