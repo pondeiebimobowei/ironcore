@@ -1,19 +1,17 @@
-import type { ReactNode } from "react";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
+import { useAuth } from "../lib/auth/AuthProvider";
 
-type ProtectedRouteProps = {
-  children: ReactNode;
-  isAuthenticated: boolean;
-  fallback?: ReactNode;
-};
+export function ProtectedRoute() {
+  const { isAuthenticated, isInitializing } = useAuth();
+  const location = useLocation();
 
-export function ProtectedRoute({
-  children,
-  isAuthenticated,
-  fallback = null,
-}: ProtectedRouteProps) {
-  if (!isAuthenticated) {
-    return fallback;
+  if (isInitializing) {
+    return <main className="page">Restoring session...</main>;
   }
 
-  return children;
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace state={{ from: location }} />;
+  }
+
+  return <Outlet />;
 }
