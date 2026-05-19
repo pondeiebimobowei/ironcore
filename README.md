@@ -22,8 +22,25 @@ The product features are not implemented yet. Follow the roadmap in `doc/impleme
 - Node.js 20+
 - npm 10+
 - Git
+- Docker Desktop or another Docker-compatible runtime
 
-PostgreSQL, Prisma, Docker Compose, and environment configuration will be added in the foundation tasks before domain feature work begins.
+Prisma will be added in a later foundation task before domain feature work begins.
+
+## Local Environment
+
+Create a local environment file:
+
+```bash
+cp .env.example .env
+```
+
+Start the local PostgreSQL database:
+
+```bash
+docker compose -f docker/docker-compose.yml up -d db
+```
+
+The local API defaults to `http://localhost:4000`, and the Vite app defaults to `http://localhost:5173`.
 
 ## Common Commands
 

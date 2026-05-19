@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: ironcore-retain-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-ironcore}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ironcore}
+      POSTGRES_DB: ${POSTGRES_DB:-ironcore_retain}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - ironcore-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  ironcore-postgres-data:
