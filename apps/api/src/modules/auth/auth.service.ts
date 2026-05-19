@@ -91,6 +91,51 @@ export class AuthService {
     return this.createSession(user, user.organization);
   }
 
+  async refresh(refreshToken: string | undefined): Promise<AuthSession> {
+    if (!refreshToken) {
+      throw new UnauthorizedException('Refresh token is required');
+    }
+
+    const tokenHash = this.hashRefreshToken(refreshToken);
+    const storedToken = await this.prisma.refreshToken.findUnique({
+      where: { tokenHash },
+      include: {
+        user: {
+          include: { organization: true },
+        },
+      },
+    });
+
+    if (
+      !storedToken ||
+      storedToken.revokedAt ||
+      storedToken.expiresAt.getTime() <= Date.now()
+    ) {
+      throw new UnauthorizedException('Refresh token is invalid or expired');
+    }
+
+    await this.prisma.refreshToken.update({
+      where: { id: storedToken.id },
+      data: { revokedAt: new Date() },
+    });
+
+    return this.createSession(storedToken.user, storedToken.user.organization);
+  }
+
+  async logout(refreshToken: string | undefined): Promise<void> {
+    if (!refreshToken) {
+      return;
+    }
+
+    await this.prisma.refreshToken.updateMany({
+      where: {
+        tokenHash: this.hashRefreshToken(refreshToken),
+        revokedAt: null,
+      },
+      data: { revokedAt: new Date() },
+    });
+  }
+
   private async createSession(
     user: {
       id: string;
