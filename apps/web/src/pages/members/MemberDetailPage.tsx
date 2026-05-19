@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getMember, updateMember } from "../../features/members/api";
 import type { MemberDetail, MemberStatus } from "../../features/members/types";
@@ -17,7 +17,7 @@ export function MemberDetailPage() {
   const [member, setMember] = useState<MemberDetail | null>(null);
   const [error, setError] = useState("");
 
-  const loadMember = async () => {
+  const loadMember = useCallback(async () => {
     if (!memberId) {
       return;
     }
@@ -27,11 +27,15 @@ export function MemberDetailPage() {
     } catch {
       setError("Could not load this member.");
     }
-  };
+  }, [memberId]);
 
   useEffect(() => {
-    void loadMember();
-  }, [memberId]);
+    const timeoutId = window.setTimeout(() => {
+      void loadMember();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [loadMember]);
 
   const handleStatusChange = async (status: MemberStatus) => {
     if (!memberId) {

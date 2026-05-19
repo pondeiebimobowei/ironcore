@@ -6,6 +6,7 @@ import {
   IsString,
   MinLength,
 } from 'class-validator';
+import { emptyStringToUndefined } from './empty-string-to-undefined';
 
 export class CreateMemberDto {
   @IsString()
@@ -14,7 +15,7 @@ export class CreateMemberDto {
 
   @IsOptional()
   @IsString()
-  @Transform(({ value }) => (value === '' ? undefined : value))
+  @Transform(emptyStringToUndefined)
   lastName?: string;
 
   @IsString()
@@ -23,21 +24,21 @@ export class CreateMemberDto {
 
   @IsOptional()
   @IsEmail()
-  @Transform(({ value }) => (value === '' ? undefined : value))
+  @Transform(emptyStringToUndefined)
   email?: string;
 
   @IsOptional()
   @IsString()
-  @Transform(({ value }) => (value === '' ? undefined : value))
+  @Transform(emptyStringToUndefined)
   planId?: string;
 
   @IsOptional()
   @IsDateString()
-  @Transform(({ value }) => (value === '' ? undefined : value))
+  @Transform(emptyStringToUndefined)
   expiryDate?: string;
 
   @IsOptional()
   @IsString()
-  @Transform(({ value }) => (value === '' ? undefined : value))
+  @Transform(emptyStringToUndefined)
   notes?: string;
 }

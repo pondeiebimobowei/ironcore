@@ -6,7 +6,7 @@ export type MemberStatus =
   | "PENDING_VERIFICATION"
   | "CHURNED";
 
-export type MemberSummary = {
+type MemberBase = {
   id: string;
   firstName: string;
   lastName?: string | null;
@@ -15,6 +15,9 @@ export type MemberSummary = {
   status: MemberStatus;
   notes?: string | null;
   updatedAt: string;
+};
+
+export type MemberSummary = MemberBase & {
   memberships: Array<{
     id: string;
     expiryDate: string;
@@ -31,7 +34,7 @@ export type MemberSummary = {
   }>;
 };
 
-export type MemberDetail = MemberSummary & {
+export type MemberDetail = MemberBase & {
   createdAt: string;
   memberships: Array<{
     id: string;
@@ -48,6 +51,13 @@ export type MemberDetail = MemberSummary & {
     type: string;
     status: string;
     dueDate?: string | null;
+  }>;
+  payments: Array<{
+    id: string;
+    status: string;
+    amountExpected: string;
+    amountPaid?: string | null;
+    submittedAt: string;
   }>;
   timelineEvents: Array<{
     id: string;

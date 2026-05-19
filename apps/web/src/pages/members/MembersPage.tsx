@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { MemberForm } from "../../components/members/MemberForm";
 import { MemberImport } from "../../components/members/MemberImport";
 import { MemberTable } from "../../components/members/MemberTable";
@@ -22,18 +22,22 @@ export function MembersPage() {
   const [status, setStatus] = useState<MemberStatus | "">("");
   const [error, setError] = useState("");
 
-  const loadMembers = async () => {
+  const loadMembers = useCallback(async () => {
     try {
       setError("");
       setMembers(await listMembers({ search, status }));
     } catch {
       setError("Could not load members.");
     }
-  };
+  }, [search, status]);
 
   useEffect(() => {
-    void loadMembers();
-  }, [search, status]);
+    const timeoutId = window.setTimeout(() => {
+      void loadMembers();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [loadMembers]);
 
   const counts = useMemo(
     () => ({

@@ -8,6 +8,7 @@ import {
   MinLength,
   ValidateNested,
 } from 'class-validator';
+import { emptyStringToUndefined } from './empty-string-to-undefined';
 
 export class ImportMemberRowDto {
   @IsString()
@@ -16,7 +17,7 @@ export class ImportMemberRowDto {
 
   @IsOptional()
   @IsString()
-  @Transform(({ value }) => (value === '' ? undefined : value))
+  @Transform(emptyStringToUndefined)
   lastName?: string;
 
   @IsString()
@@ -25,17 +26,17 @@ export class ImportMemberRowDto {
 
   @IsOptional()
   @IsEmail()
-  @Transform(({ value }) => (value === '' ? undefined : value))
+  @Transform(emptyStringToUndefined)
   email?: string;
 
   @IsOptional()
   @IsDateString()
-  @Transform(({ value }) => (value === '' ? undefined : value))
+  @Transform(emptyStringToUndefined)
   expiryDate?: string;
 
   @IsOptional()
   @IsString()
-  @Transform(({ value }) => (value === '' ? undefined : value))
+  @Transform(emptyStringToUndefined)
   notes?: string;
 }
 
