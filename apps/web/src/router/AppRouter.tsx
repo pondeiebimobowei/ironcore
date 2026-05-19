@@ -7,6 +7,7 @@ import { MemberDetailPage } from "../pages/members/MemberDetailPage";
 import { MembersPage } from "../pages/members/MembersPage";
 import { PaymentDetailPage } from "../pages/payments/PaymentDetailPage";
 import { PaymentsPage } from "../pages/payments/PaymentsPage";
+import { RecoveryQueuePage } from "../pages/recovery/RecoveryQueuePage";
 import { WorkflowsPage } from "../pages/workflows/WorkflowsPage";
 import { ProtectedRoute } from "./ProtectedRoute";
 
@@ -24,6 +25,7 @@ export const router = createBrowserRouter([
           { path: "/members/:memberId", element: <MemberDetailPage /> },
           { path: "/payments", element: <PaymentsPage /> },
           { path: "/payments/:paymentId", element: <PaymentDetailPage /> },
+          { path: "/recovery", element: <RecoveryQueuePage /> },
           { path: "/workflows", element: <WorkflowsPage /> },
         ],
       },

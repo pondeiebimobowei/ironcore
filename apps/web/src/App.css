@@ -413,10 +413,114 @@ th {
   color: #172033;
 }
 
+.recovery-queue {
+  display: grid;
+  gap: 18px;
+}
+
+.task-group {
+  display: grid;
+  gap: 12px;
+}
+
+.task-group-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.task-group-header h2 {
+  margin: 0 0 4px;
+  font-size: 18px;
+}
+
+.task-group-header p,
+.task-card p,
+.task-group-empty,
+.task-card-meta span,
+.task-card-meta small,
+.empty-state span {
+  color: #697586;
+}
+
+.task-group-header p,
+.task-card p,
+.task-group-empty {
+  margin: 0;
+}
+
+.task-group-header strong {
+  min-width: 36px;
+  border: 1px solid #d8dde6;
+  border-radius: 999px;
+  background: #ffffff;
+  padding: 5px 10px;
+  text-align: center;
+}
+
+.task-list {
+  display: grid;
+  gap: 10px;
+}
+
+.task-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 0.8fr);
+  gap: 18px;
+  border: 1px solid #d8dde6;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 16px;
+}
+
+.task-card-header,
+.task-card-meta {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.task-card-header {
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.task-card-header strong {
+  color: #172033;
+  font-size: 16px;
+}
+
+.task-card-meta {
+  justify-content: flex-end;
+}
+
+.task-card-meta > div {
+  min-width: 120px;
+}
+
+.task-card-meta span,
+.task-card-meta small {
+  display: block;
+  font-size: 13px;
+}
+
+.task-card-meta strong {
+  display: block;
+  color: #172033;
+}
+
+.task-card-meta .button-link {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
 @media (max-width: 900px) {
   .topbar,
   .page-header,
-  .workflow-card-header {
+  .workflow-card-header,
+  .task-card,
+  .task-card-meta {
     align-items: flex-start;
     flex-direction: column;
   }
@@ -428,5 +532,9 @@ th {
   .form-grid,
   .split-layout {
     grid-template-columns: 1fr;
+  }
+
+  .task-card {
+    display: flex;
   }
 }
