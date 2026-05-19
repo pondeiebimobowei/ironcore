@@ -111,6 +111,55 @@ td span,
   font-size: 20px;
 }
 
+.metric-card-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.metric-card {
+  min-height: 118px;
+  display: grid;
+  align-content: space-between;
+  gap: 12px;
+  border: 1px solid #d8dde6;
+  border-left-width: 4px;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 16px;
+}
+
+.metric-card-neutral {
+  border-left-color: #697586;
+}
+
+.metric-card-warning {
+  border-left-color: #c77700;
+}
+
+.metric-card-danger {
+  border-left-color: #b42318;
+}
+
+.metric-card-success {
+  border-left-color: #067647;
+}
+
+.metric-card-label,
+.metric-card-detail {
+  display: block;
+  color: #697586;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.metric-card-value {
+  display: block;
+  color: #172033;
+  font-size: 26px;
+  line-height: 1.15;
+}
+
 .toolbar,
 .form-grid {
   display: grid;
@@ -278,6 +327,7 @@ th {
 
   .dashboard-grid,
   .dashboard-grid.compact,
+  .metric-card-grid,
   .toolbar,
   .form-grid,
   .split-layout {
