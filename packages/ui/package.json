@@ -33,7 +33,8 @@
   "scripts": {
     "build": "bunchee",
     "dev": "bunchee --watch",
-    "check-types": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "check-types": "npm run typecheck",
     "lint": "eslint src/",
     "test": "jest"
   },

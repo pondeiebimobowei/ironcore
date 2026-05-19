@@ -1,5 +1,5 @@
 {
-  "name": "kitchen-sink",
+  "name": "ironcore-retain",
   "private": true,
   "scripts": {
     "build": "turbo run build",
@@ -8,14 +8,15 @@
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "lint": "turbo run lint",
     "test": "turbo run test",
-    "check-types": "turbo run check-types"
+    "typecheck": "turbo run typecheck",
+    "check-types": "npm run typecheck"
   },
   "devDependencies": {
     "prettier": "^3.6.0",
     "turbo": "^2.9.14"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "packageManager": "npm@11.6.2",
   "workspaces": [

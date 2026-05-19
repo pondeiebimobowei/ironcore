@@ -25,7 +25,8 @@
     "build": "bunchee",
     "dev": "bunchee --watch",
     "lint": "eslint src/",
-    "check-types": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "check-types": "npm run typecheck",
     "test": "jest"
   },
   "jest": {
