@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { JobRunStatus } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { MembershipStateService } from '../memberships/membership-state.service';
+import { TimelineService } from '../timeline/timeline.service';
 
 const MEMBER_STATE_JOB_NAME = 'member-state-update';
 const MEMBER_STATE_ADVISORY_LOCK_ID = 88001;
@@ -28,6 +29,7 @@ export class MemberStateJob {
   constructor(
     private readonly prisma: PrismaService,
     private readonly membershipStateService: MembershipStateService,
+    private readonly timelineService: TimelineService,
   ) {}
 
   async run(asOf: Date = new Date()): Promise<MemberStateJobResult> {
@@ -107,6 +109,15 @@ export class MemberStateJob {
               await tx.member.update({
                 where: { id: member.id },
                 data: { status: targetMemberStatus },
+              });
+              await this.timelineService.logMemberStatusChanged({
+                tx,
+                organizationId: member.organizationId,
+                memberId: member.id,
+                previousStatus: member.status,
+                nextStatus: targetMemberStatus,
+                source: MEMBER_STATE_JOB_NAME,
+                jobRunId: jobRun.id,
               });
             }
           } catch (error: unknown) {

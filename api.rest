@@ -1,0 +1,42 @@
+@host = http://localhost:4000
+@email = test@gmail.com
+@password = password123
+@organizationName = test organization
+@firstName = Test
+@lastName = User
+@phone = 1234567890
+@referralCode = TEST-123456-REFERRAL-TOKEN
+@gender = male
+@birthDate = 2000-01-01
+@referredBy = ""
+@refreshToken = "jzluekk6RI_PPWmRYCeI3Q7n2n4ubhwGpGgAsh2Fr5ciz05tUZAtsEZrCOyIWKlx"
+@accessToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjbXBjcHlpdWEwMDAxbjdkbHJxZHUwY3R0IiwiZW1haWwiOiJ0ZXN0QGdtYWlsLmNvbSIsInJvbGUiOiJPV05FUiIsIm9yZ2FuaXphdGlvbklkIjoiY21wY3B5aXU2MDAwMG43ZGw5dTd3NWozaSIsImlhdCI6MTc3OTIwMDM2MywiZXhwIjoxNzc5MjAxMjYzfQ._4xqeh-D1sy0kECnD_C-jwZx8LdVvMEEzI5VPU9vMOw"
+
+### Login
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+    "email": "{{email}}",
+    "password": "{{password}}"
+}
+
+
+### Signup
+POST {{host}}/api/auth/signup
+Content-Type: application/json
+
+{
+    "email": "{{email}}",
+    "password": "{{password}}",
+    "organizationName": "{{organizationName}}"
+}
+
+### Refresh
+POST {{host}}/api/auth/refresh
+Cookie: refreshToken="{{refreshToken}}"
+
+
+### Logout
+POST {{host}}/api/auth/logout
+Cookie: refreshToken="{{refreshToken}}"
