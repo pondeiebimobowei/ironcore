@@ -341,9 +341,82 @@ th {
   margin-top: 10px;
 }
 
+.workflow-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.workflow-card {
+  display: grid;
+  gap: 18px;
+  border: 1px solid #d8dde6;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 18px;
+}
+
+.workflow-card-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+}
+
+.workflow-card h2 {
+  margin: 10px 0 6px;
+  font-size: 20px;
+}
+
+.workflow-card p {
+  margin: 0;
+  color: #697586;
+}
+
+.workflow-step-list {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.workflow-step-list li {
+  display: grid;
+  gap: 10px;
+  border: 1px solid #edf0f4;
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.workflow-step-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.workflow-step-header span,
+.mock-message-preview span {
+  color: #697586;
+  font-size: 13px;
+}
+
+.mock-message-preview {
+  display: grid;
+  gap: 6px;
+  border-left: 4px solid #2157d3;
+  background: #f7f9ff;
+  border-radius: 6px;
+  padding: 12px;
+}
+
+.mock-message-preview p {
+  color: #172033;
+}
+
 @media (max-width: 900px) {
   .topbar,
-  .page-header {
+  .page-header,
+  .workflow-card-header {
     align-items: flex-start;
     flex-direction: column;
   }

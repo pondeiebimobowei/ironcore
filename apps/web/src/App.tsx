@@ -16,6 +16,7 @@ export function AppLayout() {
             <NavLink to="/">Dashboard</NavLink>
             <NavLink to="/members">Members</NavLink>
             <NavLink to="/payments">Payments</NavLink>
+            <NavLink to="/workflows">Workflows</NavLink>
             <button type="button" onClick={() => void auth.logout()}>
               Sign out
             </button>
