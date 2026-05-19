@@ -1,0 +1,393 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  OWNER
+  ADMIN
+  STAFF
+}
+
+enum MemberStatus {
+  ACTIVE
+  EXPIRING
+  OVERDUE
+  AT_RISK
+  PENDING_VERIFICATION
+  CHURNED
+}
+
+enum BillingCycle {
+  MONTHLY
+  QUARTERLY
+  ANNUAL
+  CUSTOM
+}
+
+enum MembershipStatus {
+  ACTIVE
+  EXPIRED
+}
+
+enum PaymentStatus {
+  PENDING_VERIFICATION
+  VERIFIED
+  REJECTED
+}
+
+enum PaymentMethod {
+  BANK_TRANSFER
+  CASH
+  POS
+  STRIPE
+  OTHER
+}
+
+enum WorkflowType {
+  RENEWAL_REMINDER
+  OVERDUE_RECOVERY
+  REACTIVATION
+}
+
+enum WorkflowStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+enum WorkflowStepStatus {
+  PENDING
+  SENT
+  FAILED
+  SKIPPED
+}
+
+enum MessageDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum MessageStatus {
+  PENDING
+  SENT
+  DELIVERED
+  FAILED
+}
+
+enum TaskType {
+  VERIFY_PAYMENT
+  FOLLOW_UP_MEMBER
+  RESOLVE_OVERDUE_STATUS
+  REVIEW_AT_RISK_MEMBER
+  REACTIVATION
+}
+
+enum TaskStatus {
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum TimelineEventType {
+  MEMBER_CREATED
+  MEMBER_UPDATED
+  MEMBER_STATUS_CHANGED
+  MEMBERSHIP_CREATED
+  MEMBERSHIP_RENEWED
+  PAYMENT_CREATED
+  PAYMENT_VERIFIED
+  PAYMENT_REJECTED
+  WORKFLOW_CREATED
+  WORKFLOW_STEP_EXECUTED
+  MESSAGE_SENT
+  TASK_CREATED
+  TASK_COMPLETED
+}
+
+enum JobRunStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+  PARTIAL
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users          User[]
+  members        Member[]
+  plans          Plan[]
+  memberships    Membership[]
+  payments       Payment[]
+  workflows      Workflow[]
+  workflowSteps  WorkflowStep[]
+  messageLogs    MessageLog[]
+  tasks          Task[]
+  timelineEvents TimelineEvent[]
+
+  @@index([slug])
+}
+
+model User {
+  id             String   @id @default(cuid())
+  organizationId String
+  email          String   @unique
+  passwordHash   String
+  role           UserRole @default(STAFF)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization     Organization   @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  refreshTokens    RefreshToken[]
+  verifiedPayments Payment[]      @relation("PaymentVerifiedBy")
+  assignedTasks    Task[]         @relation("TaskAssignedTo")
+
+  @@index([organizationId])
+  @@index([organizationId, role])
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Member {
+  id             String       @id @default(cuid())
+  organizationId String
+  firstName      String
+  lastName       String?
+  phoneNumber    String
+  email          String?
+  status         MemberStatus @default(ACTIVE)
+  notes          String?
+  deletedAt      DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  memberships    Membership[]
+  payments       Payment[]
+  workflows      Workflow[]
+  messageLogs    MessageLog[]
+  tasks          Task[]
+  timelineEvents TimelineEvent[]
+
+  @@unique([organizationId, phoneNumber])
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@index([organizationId, deletedAt])
+}
+
+model Plan {
+  id             String       @id @default(cuid())
+  organizationId String
+  name           String
+  billingCycle   BillingCycle @default(MONTHLY)
+  amount         Decimal      @db.Decimal(12, 2)
+  currency       String       @default("NGN")
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  memberships  Membership[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+}
+
+model Membership {
+  id             String           @id @default(cuid())
+  organizationId String
+  memberId       String
+  planId         String?
+  startDate      DateTime         @db.Date
+  expiryDate     DateTime         @db.Date
+  status         MembershipStatus @default(ACTIVE)
+  amount         Decimal          @db.Decimal(12, 2)
+  currency       String           @default("NGN")
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  member       Member       @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  plan         Plan?        @relation(fields: [planId], references: [id], onDelete: SetNull)
+  payments     Payment[]
+  workflows    Workflow[]
+
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@index([organizationId, expiryDate])
+  @@index([memberId])
+}
+
+model Payment {
+  id              String        @id @default(cuid())
+  organizationId  String
+  memberId        String
+  membershipId    String?
+  status          PaymentStatus @default(PENDING_VERIFICATION)
+  amountExpected  Decimal       @db.Decimal(12, 2)
+  amountPaid      Decimal?      @db.Decimal(12, 2)
+  proofUrl        String?
+  method          PaymentMethod @default(BANK_TRANSFER)
+  reference       String?
+  submittedAt     DateTime      @default(now())
+  verifiedById    String?
+  verifiedAt      DateTime?
+  rejectionReason String?
+  notes           String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  member       Member       @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  membership   Membership?  @relation(fields: [membershipId], references: [id], onDelete: SetNull)
+  verifiedBy   User?        @relation("PaymentVerifiedBy", fields: [verifiedById], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@index([memberId])
+  @@index([membershipId])
+}
+
+model Workflow {
+  id               String         @id @default(cuid())
+  organizationId   String
+  memberId         String
+  membershipId     String?
+  type             WorkflowType
+  status           WorkflowStatus @default(ACTIVE)
+  currentDayOffset Int            @default(0)
+  nextRunAt        DateTime?
+  lastRunAt        DateTime?
+  triggerDate      DateTime       @db.Date
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  member       Member         @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  membership   Membership?    @relation(fields: [membershipId], references: [id], onDelete: SetNull)
+  steps        WorkflowStep[]
+
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@index([organizationId, nextRunAt])
+  @@index([memberId])
+}
+
+model WorkflowStep {
+  id              String             @id @default(cuid())
+  workflowId      String
+  organizationId  String
+  dayOffset       Int
+  messageTemplate String
+  executedAt      DateTime?
+  status          WorkflowStepStatus @default(PENDING)
+  retryCount      Int                @default(0)
+  errorMessage    String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  workflow     Workflow     @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  messageLogs  MessageLog[]
+
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@index([workflowId])
+}
+
+model MessageLog {
+  id             String           @id @default(cuid())
+  organizationId String
+  memberId       String
+  workflowStepId String?
+  phoneNumber    String
+  direction      MessageDirection
+  content        String
+  status         MessageStatus    @default(PENDING)
+  errorMessage   String?
+  sentAt         DateTime?
+  createdAt      DateTime         @default(now())
+
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  member       Member        @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  workflowStep WorkflowStep? @relation(fields: [workflowStepId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@index([memberId])
+  @@index([workflowStepId])
+}
+
+model Task {
+  id             String     @id @default(cuid())
+  organizationId String
+  memberId       String
+  type           TaskType
+  status         TaskStatus @default(OPEN)
+  assignedToId   String?
+  dueDate        DateTime?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  member       Member       @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  assignedTo   User?        @relation("TaskAssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@index([organizationId, dueDate])
+  @@index([memberId])
+}
+
+model TimelineEvent {
+  id             String            @id @default(cuid())
+  organizationId String
+  memberId       String
+  type           TimelineEventType
+  metadata       Json?
+  createdAt      DateTime          @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  member       Member       @relation(fields: [memberId], references: [id], onDelete: Restrict)
+
+  @@index([organizationId])
+  @@index([organizationId, type])
+  @@index([memberId])
+  @@index([createdAt])
+}
+
+model JobRun {
+  id             String       @id @default(cuid())
+  jobName        String
+  startedAt      DateTime     @default(now())
+  completedAt    DateTime?
+  status         JobRunStatus @default(RUNNING)
+  processedCount Int          @default(0)
+  errorCount     Int          @default(0)
+  errorLog       Json?
+
+  @@index([jobName])
+  @@index([status])
+  @@index([startedAt])
+}
