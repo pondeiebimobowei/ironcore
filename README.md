@@ -119,4 +119,4 @@ The MVP follows the accepted decisions in `doc/architecture-decision-records.md`
 - Use timeline events for important state transitions.
 - Do not build features outside the documented MVP scope.
 
-See `doc/agents.md` for AI-assisted development rules.
+See `AGENTS.md` for the tracked task alignment protocol and AI-assisted development rules. The fuller product documentation lives in `doc/`.
