@@ -160,6 +160,29 @@ td span,
   line-height: 1.15;
 }
 
+.dashboard-state {
+  display: grid;
+  gap: 8px;
+  border: 1px solid #d8dde6;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 18px;
+}
+
+.dashboard-state strong {
+  color: #172033;
+  font-size: 18px;
+}
+
+.dashboard-state span {
+  color: #697586;
+}
+
+.dashboard-state-error {
+  border-color: #f3b6b0;
+  background: #fffafa;
+}
+
 .toolbar,
 .form-grid {
   display: grid;

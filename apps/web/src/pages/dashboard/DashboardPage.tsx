@@ -27,19 +27,30 @@ function formatCurrency(value: number) {
 export function DashboardPage() {
   const { organization } = useAuth();
   const [summary, setSummary] = useState<DashboardSummary>(emptySummary);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
+
+    setIsLoading(true);
+    setErrorMessage(null);
 
     getDashboardSummary()
       .then((data) => {
         if (active) {
           setSummary(data);
+          setErrorMessage(null);
         }
       })
       .catch(() => {
         if (active) {
-          setSummary(emptySummary);
+          setErrorMessage("Dashboard metrics could not be loaded.");
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setIsLoading(false);
         }
       });
 
@@ -87,6 +98,7 @@ export function DashboardPage() {
     ],
     [summary],
   );
+  const hasDashboardData = Object.values(summary).some((value) => value > 0);
 
   return (
     <main className="page">
@@ -99,7 +111,24 @@ export function DashboardPage() {
           Manage members
         </Link>
       </header>
-      <MetricCardGrid metrics={metrics} />
+      {isLoading ? (
+        <section className="dashboard-state">
+          <strong>Loading dashboard metrics</strong>
+          <span>Checking recovered, overdue, and at-risk revenue.</span>
+        </section>
+      ) : errorMessage ? (
+        <section className="dashboard-state dashboard-state-error">
+          <strong>{errorMessage}</strong>
+          <span>Refresh the page or try again after the API is available.</span>
+        </section>
+      ) : hasDashboardData ? (
+        <MetricCardGrid metrics={metrics} />
+      ) : (
+        <section className="dashboard-state">
+          <strong>No revenue recovery data yet</strong>
+          <span>Import members and run the state engine to populate metrics.</span>
+        </section>
+      )}
     </main>
   );
 }
