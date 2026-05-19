@@ -8,14 +8,19 @@ import {
   MembershipStatus,
   PaymentMethod,
   PaymentStatus,
+  TaskType,
   TimelineEventType,
 } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
+import { TasksService } from '../tasks/tasks.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 
 @Injectable()
 export class PaymentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly tasksService: TasksService,
+  ) {}
 
   list(organizationId: string) {
     return this.prisma.payment.findMany({
@@ -116,6 +121,19 @@ export class PaymentsService {
             paymentId: createdPayment.id,
             status: createdPayment.status,
           },
+        },
+      });
+
+      await this.tasksService.createGeneratedTask({
+        tx,
+        organizationId,
+        memberId: member.id,
+        type: TaskType.VERIFY_PAYMENT,
+        dueDate: new Date(),
+        source: 'payment_created',
+        metadata: {
+          paymentId: createdPayment.id,
+          status: createdPayment.status,
         },
       });
 

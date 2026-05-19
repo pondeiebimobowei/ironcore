@@ -1,7 +1,13 @@
 /* eslint-disable @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/unbound-method */
-import { JobRunStatus, MemberStatus, MembershipStatus } from '@prisma/client';
+import {
+  JobRunStatus,
+  MemberStatus,
+  MembershipStatus,
+  TaskType,
+} from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { MembershipStateService } from '../memberships/membership-state.service';
+import { TasksService } from '../tasks/tasks.service';
 import { TimelineService } from '../timeline/timeline.service';
 import { MemberStateJob } from './member-state.job';
 
@@ -39,9 +45,19 @@ const createJob = (tx: ReturnType<typeof createTransaction>) => {
     logMemberStatusChanged: jest.fn().mockResolvedValue({ id: 'event-1' }),
   } as unknown as jest.Mocked<TimelineService>;
 
+  const tasksService = {
+    ensureOpenTask: jest.fn().mockResolvedValue({ id: 'task-1' }),
+  } as unknown as jest.Mocked<TasksService>;
+
   return {
-    job: new MemberStateJob(prisma, membershipStateService, timelineService),
+    job: new MemberStateJob(
+      prisma,
+      membershipStateService,
+      tasksService,
+      timelineService,
+    ),
     membershipStateService,
+    tasksService,
     timelineService,
   };
 };
@@ -79,7 +95,8 @@ describe('MemberStateJob', () => {
         payments: [],
       },
     ]);
-    const { job, membershipStateService, timelineService } = createJob(tx);
+    const { job, membershipStateService, tasksService, timelineService } =
+      createJob(tx);
     membershipStateService.calculateMembershipStatus.mockReturnValue(
       MembershipStatus.EXPIRED,
     );
@@ -111,6 +128,18 @@ describe('MemberStateJob', () => {
       source: 'member-state-update',
       jobRunId: 'job-run-1',
     });
+    expect(tasksService.ensureOpenTask).toHaveBeenCalledWith({
+      tx,
+      organizationId: 'org-1',
+      memberId: 'member-1',
+      type: TaskType.RESOLVE_OVERDUE_STATUS,
+      dueDate: asOf,
+      source: 'member-state-update',
+      metadata: {
+        status: MemberStatus.OVERDUE,
+        jobRunId: 'job-run-1',
+      },
+    });
     expect(tx.jobRun.update).toHaveBeenCalledWith({
       where: { id: 'job-run-1' },
       data: expect.objectContaining({
@@ -139,7 +168,8 @@ describe('MemberStateJob', () => {
         payments: [],
       },
     ]);
-    const { job, membershipStateService, timelineService } = createJob(tx);
+    const { job, membershipStateService, tasksService, timelineService } =
+      createJob(tx);
     membershipStateService.calculateMembershipStatus.mockReturnValue(
       MembershipStatus.EXPIRED,
     );
@@ -156,6 +186,18 @@ describe('MemberStateJob', () => {
     expect(tx.membership.update).not.toHaveBeenCalled();
     expect(tx.member.update).not.toHaveBeenCalled();
     expect(timelineService.logMemberStatusChanged).not.toHaveBeenCalled();
+    expect(tasksService.ensureOpenTask).toHaveBeenCalledWith({
+      tx,
+      organizationId: 'org-1',
+      memberId: 'member-1',
+      type: TaskType.RESOLVE_OVERDUE_STATUS,
+      dueDate: asOf,
+      source: 'member-state-update',
+      metadata: {
+        status: MemberStatus.OVERDUE,
+        jobRunId: 'job-run-1',
+      },
+    });
   });
 
   it('marks the job run partial when an individual member update fails', async () => {

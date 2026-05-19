@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { TaskStatus, TimelineEventType } from '@prisma/client';
+import { Prisma, TaskStatus, TaskType, TimelineEventType } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
@@ -7,6 +7,20 @@ import { UpdateTaskDto } from './dto/update-task.dto';
 type ListTasksQuery = {
   status?: TaskStatus;
 };
+
+type TaskTransaction = Pick<Prisma.TransactionClient, 'task' | 'timelineEvent'>;
+
+type EnsureOpenTaskInput = {
+  tx: TaskTransaction;
+  organizationId: string;
+  memberId: string;
+  type: TaskType;
+  dueDate?: Date;
+  source: string;
+  metadata?: Record<string, unknown>;
+};
+
+type CreateGeneratedTaskInput = EnsureOpenTaskInput;
 
 @Injectable()
 export class TasksService {
@@ -28,6 +42,51 @@ export class TasksService {
 
   listOpenTasks(organizationId: string) {
     return this.list(organizationId, { status: TaskStatus.OPEN });
+  }
+
+  async ensureOpenTask(input: EnsureOpenTaskInput) {
+    const existingTask = await input.tx.task.findFirst({
+      where: {
+        organizationId: input.organizationId,
+        memberId: input.memberId,
+        type: input.type,
+        status: { in: [TaskStatus.OPEN, TaskStatus.IN_PROGRESS] },
+      },
+      orderBy: [{ dueDate: 'asc' }, { createdAt: 'asc' }],
+    });
+
+    if (existingTask) {
+      return existingTask;
+    }
+
+    return this.createGeneratedTask(input);
+  }
+
+  async createGeneratedTask(input: CreateGeneratedTaskInput) {
+    const task = await input.tx.task.create({
+      data: {
+        organizationId: input.organizationId,
+        memberId: input.memberId,
+        type: input.type,
+        dueDate: input.dueDate,
+      },
+    });
+
+    await input.tx.timelineEvent.create({
+      data: {
+        organizationId: input.organizationId,
+        memberId: input.memberId,
+        type: TimelineEventType.TASK_CREATED,
+        metadata: {
+          taskId: task.id,
+          type: task.type,
+          source: input.source,
+          ...input.metadata,
+        },
+      },
+    });
+
+    return task;
   }
 
   async create(organizationId: string, dto: CreateTaskDto) {

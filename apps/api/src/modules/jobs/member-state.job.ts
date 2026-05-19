@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { JobRunStatus } from '@prisma/client';
+import { JobRunStatus, MemberStatus, TaskType } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { MembershipStateService } from '../memberships/membership-state.service';
+import { TasksService } from '../tasks/tasks.service';
 import { TimelineService } from '../timeline/timeline.service';
 
 const MEMBER_STATE_JOB_NAME = 'member-state-update';
@@ -29,6 +30,7 @@ export class MemberStateJob {
   constructor(
     private readonly prisma: PrismaService,
     private readonly membershipStateService: MembershipStateService,
+    private readonly tasksService: TasksService,
     private readonly timelineService: TimelineService,
   ) {}
 
@@ -120,6 +122,23 @@ export class MemberStateJob {
                 jobRunId: jobRun.id,
               });
             }
+
+            const taskType = this.taskTypeForMemberStatus(targetMemberStatus);
+
+            if (taskType) {
+              await this.tasksService.ensureOpenTask({
+                tx,
+                organizationId: member.organizationId,
+                memberId: member.id,
+                type: taskType,
+                dueDate: asOf,
+                source: MEMBER_STATE_JOB_NAME,
+                metadata: {
+                  status: targetMemberStatus,
+                  jobRunId: jobRun.id,
+                },
+              });
+            }
           } catch (error: unknown) {
             errors.push({
               memberId: member.id,
@@ -188,5 +207,21 @@ export class MemberStateJob {
         `;
       }
     });
+  }
+
+  private taskTypeForMemberStatus(status: MemberStatus) {
+    if (status === MemberStatus.OVERDUE) {
+      return TaskType.RESOLVE_OVERDUE_STATUS;
+    }
+
+    if (status === MemberStatus.AT_RISK) {
+      return TaskType.REVIEW_AT_RISK_MEMBER;
+    }
+
+    if (status === MemberStatus.CHURNED) {
+      return TaskType.REACTIVATION;
+    }
+
+    return null;
   }
 }
