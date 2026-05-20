@@ -1,4 +1,4 @@
-export type WorkflowStatus = "ACTIVE" | "PAUSED";
+export type WorkflowStatus = "ACTIVE" | "PAUSED" | "COMPLETED" | "CANCELLED";
 
 export type WorkflowTemplateStep = {
   id: string;
@@ -10,7 +10,7 @@ export type WorkflowTemplateStep = {
 export type WorkflowTemplate = {
   id: string;
   name: string;
-  type: "RENEWAL_REMINDER" | "OVERDUE_RECOVERY";
+  type: "RENEWAL_REMINDER" | "OVERDUE_RECOVERY" | "REACTIVATION";
   status: WorkflowStatus;
   description: string;
   steps: WorkflowTemplateStep[];

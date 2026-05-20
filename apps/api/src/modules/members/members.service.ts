@@ -69,6 +69,7 @@ export class MembersService {
           include: { plan: true, payments: true },
         },
         payments: { orderBy: { submittedAt: 'desc' } },
+        messageLogs: { orderBy: { createdAt: 'desc' }, take: 20 },
         tasks: { orderBy: { dueDate: 'asc' } },
         timelineEvents: { orderBy: { createdAt: 'desc' }, take: 30 },
       },

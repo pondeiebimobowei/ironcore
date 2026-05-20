@@ -7,11 +7,13 @@ import { WorkflowStepList } from "./WorkflowStepList";
 
 type WorkflowTemplateCardProps = {
   workflow: WorkflowTemplate;
+  isUpdating?: boolean;
   onStatusChange: (workflowId: string, status: WorkflowStatus) => void;
 };
 
 export function WorkflowTemplateCard({
   workflow,
+  isUpdating = false,
   onStatusChange,
 }: WorkflowTemplateCardProps) {
   return (
@@ -26,6 +28,7 @@ export function WorkflowTemplateCard({
         </div>
         <WorkflowStatusToggle
           status={workflow.status}
+          isUpdating={isUpdating}
           onChange={(status) => onStatusChange(workflow.id, status)}
         />
       </header>

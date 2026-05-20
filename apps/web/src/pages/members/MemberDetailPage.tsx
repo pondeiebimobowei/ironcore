@@ -151,6 +151,25 @@ export function MemberDetailPage() {
               <span>{task.status}</span>
             </div>
           ))}
+          <h2>Message logs</h2>
+          {member.messageLogs.length === 0 ? (
+            <section className="empty-state">
+              <strong>No messages sent</strong>
+              <span>Mock WhatsApp sends will appear here after workflows run.</span>
+            </section>
+          ) : null}
+          {member.messageLogs.map((message) => (
+            <div key={message.id} className="line-item">
+              <strong>{message.status.replaceAll("_", " ")}</strong>
+              <span>
+                {new Date(
+                  message.sentAt ?? message.createdAt,
+                ).toLocaleString()}
+              </span>
+              <p>{message.content}</p>
+              {message.errorMessage ? <small>{message.errorMessage}</small> : null}
+            </div>
+          ))}
           <h2>Timeline</h2>
           {member.timelineEvents.length === 0 ? (
             <section className="empty-state">

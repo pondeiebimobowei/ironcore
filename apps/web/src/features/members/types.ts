@@ -59,6 +59,16 @@ export type MemberDetail = MemberBase & {
     amountPaid?: string | null;
     submittedAt: string;
   }>;
+  messageLogs: Array<{
+    id: string;
+    phoneNumber: string;
+    direction: string;
+    content: string;
+    status: string;
+    errorMessage?: string | null;
+    sentAt?: string | null;
+    createdAt: string;
+  }>;
   timelineEvents: Array<{
     id: string;
     type: string;

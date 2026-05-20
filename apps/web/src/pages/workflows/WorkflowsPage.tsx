@@ -1,5 +1,9 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { WorkflowTemplateCard } from "../../components/workflows";
+import {
+  listWorkflows,
+  updateWorkflowStatus,
+} from "../../features/workflows/api";
 import { defaultWorkflowTemplates } from "../../features/workflows/defaults";
 import type {
   WorkflowStatus,
@@ -10,6 +14,31 @@ export function WorkflowsPage() {
   const [workflows, setWorkflows] = useState<WorkflowTemplate[]>(
     defaultWorkflowTemplates,
   );
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [actionError, setActionError] = useState("");
+  const [updatingWorkflowId, setUpdatingWorkflowId] = useState<string | null>(
+    null,
+  );
+
+  const loadWorkflows = useCallback(async () => {
+    try {
+      setLoadError("");
+      setWorkflows(await listWorkflows());
+    } catch {
+      setLoadError("Could not load workflow settings.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void loadWorkflows();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [loadWorkflows]);
 
   const counts = useMemo(
     () => ({
@@ -25,15 +54,33 @@ export function WorkflowsPage() {
     [workflows],
   );
 
-  const handleStatusChange = (
+  const handleStatusChange = async (
     workflowId: string,
     status: WorkflowStatus,
   ) => {
+    const previousWorkflows = workflows;
+
     setWorkflows((current) =>
       current.map((workflow) =>
         workflow.id === workflowId ? { ...workflow, status } : workflow,
       ),
     );
+    setUpdatingWorkflowId(workflowId);
+    setActionError("");
+
+    try {
+      const updatedWorkflow = await updateWorkflowStatus(workflowId, status);
+      setWorkflows((current) =>
+        current.map((workflow) =>
+          workflow.id === workflowId ? updatedWorkflow : workflow,
+        ),
+      );
+    } catch {
+      setWorkflows(previousWorkflows);
+      setActionError("Could not update the workflow status.");
+    } finally {
+      setUpdatingWorkflowId(null);
+    }
   };
 
   return (
@@ -58,21 +105,40 @@ export function WorkflowsPage() {
           <strong>{counts.steps}</strong>
         </div>
       </section>
-      {workflows.length === 0 ? (
+      {isLoading ? (
+        <section className="dashboard-state">
+          <strong>Loading workflows</strong>
+          <span>Fetching active recovery message sequences.</span>
+        </section>
+      ) : loadError ? (
+        <section className="dashboard-state dashboard-state-error">
+          <strong>{loadError}</strong>
+          <span>Refresh the page or try again after the API is available.</span>
+        </section>
+      ) : workflows.length === 0 ? (
         <section className="empty-state">
           <strong>No workflow templates</strong>
           <span>Default recovery sequences will appear here once configured.</span>
         </section>
       ) : (
-        <section className="workflow-grid">
-          {workflows.map((workflow) => (
-            <WorkflowTemplateCard
-              key={workflow.id}
-              workflow={workflow}
-              onStatusChange={handleStatusChange}
-            />
-          ))}
-        </section>
+        <>
+          {actionError ? (
+            <section className="dashboard-state dashboard-state-error compact-state">
+              <strong>{actionError}</strong>
+              <span>The previous workflow setting was restored.</span>
+            </section>
+          ) : null}
+          <section className="workflow-grid">
+            {workflows.map((workflow) => (
+              <WorkflowTemplateCard
+                key={workflow.id}
+                workflow={workflow}
+                isUpdating={updatingWorkflowId === workflow.id}
+                onStatusChange={handleStatusChange}
+              />
+            ))}
+          </section>
+        </>
       )}
     </main>
   );
