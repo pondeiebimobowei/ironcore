@@ -4,7 +4,7 @@ import {
   validateImportRows,
 } from "../../lib/validations/import";
 
-function parseCsvLine(line: string) {
+export function parseCsvLine(line: string) {
   const values: string[] = [];
   let current = "";
   let quoted = false;
@@ -31,17 +31,39 @@ function parseCsvLine(line: string) {
   return values;
 }
 
-export function parseMembersCsv(csv: string) {
+export type ParsedCsv = {
+  headers: string[];
+  records: string[][];
+  errors: Array<{ row: number; message: string }>;
+};
+
+export function parseCsv(csv: string): ParsedCsv {
   const [headerLine, ...dataLines] = csv
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean);
 
   if (!headerLine) {
-    return { rows: [], errors: [{ row: 1, message: "CSV file is empty." }] };
+    return {
+      headers: [],
+      records: [],
+      errors: [{ row: 1, message: "CSV file is empty." }],
+    };
   }
 
   const headers = parseCsvLine(headerLine);
+  const records = dataLines.map((line) => parseCsvLine(line));
+
+  return { headers, records, errors: [] };
+}
+
+export function parseMembersCsv(csv: string) {
+  const { headers, records, errors } = parseCsv(csv);
+
+  if (errors.length > 0) {
+    return { rows: [], errors };
+  }
+
   const missingHeaders = validateImportHeaders(headers);
 
   if (missingHeaders.length > 0) {
@@ -54,8 +76,7 @@ export function parseMembersCsv(csv: string) {
     };
   }
 
-  const rows = dataLines.map((line) => {
-    const values = parseCsvLine(line);
+  const rows = records.map((values) => {
     const row = headers.reduce<Record<string, string>>(
       (accumulator, header, index) => {
         accumulator[header] = values[index] ?? "";

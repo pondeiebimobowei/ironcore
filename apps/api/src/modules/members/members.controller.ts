@@ -14,7 +14,7 @@ import { MemberStatus } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import type { AuthenticatedRequest } from '../auth/types/authenticated-request.type';
 import { CreateMemberDto } from './dto/create-member.dto';
-import { ImportMembersDto } from './dto/import-members.dto';
+import { ConfirmImportDto, ImportMembersDto } from './dto/import-members.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
 import { MembersService } from './members.service';
 
@@ -62,9 +62,9 @@ export class MembersController {
   @Post('import/confirm')
   confirmImport(
     @Req() req: AuthenticatedRequest,
-    @Body() dto: ImportMembersDto,
+    @Body() dto: ConfirmImportDto,
   ) {
-    return this.membersService.import(this.organizationId(req), dto);
+    return this.membersService.confirmImport(this.organizationId(req), dto);
   }
 
   @Get(':id')

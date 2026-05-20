@@ -10,12 +10,37 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { CreateMemberDto } from './dto/create-member.dto';
-import { ImportMembersDto, ImportMemberRowDto } from './dto/import-members.dto';
+import {
+  ConfirmImportDto,
+  ImportDuplicateStrategy,
+  ImportMembersDto,
+  ImportMemberRowDto,
+} from './dto/import-members.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
 
 type ListMembersQuery = {
   search?: string;
   status?: MemberStatus;
+};
+
+type ImportIssue = {
+  row: number;
+  message: string;
+  field?: 'phoneNumber' | 'email';
+  duplicateType?: 'file' | 'existing';
+  existingMember?: {
+    id: string;
+    firstName: string;
+    lastName: string | null;
+    phoneNumber: string;
+    email: string | null;
+  };
+};
+
+type ImportReportRow = {
+  row: number;
+  data: ImportMemberRowDto;
+  issues: ImportIssue[];
 };
 
 @Injectable()
@@ -197,26 +222,23 @@ export class MembersService {
   }
 
   async import(organizationId: string, dto: ImportMembersDto) {
-    const { validRows, errors } = await this.validateImportRows(
+    const { validRows, errors, warningRows } = await this.validateImportRows(
       organizationId,
       dto.rows,
     );
 
-    if (errors.length > 0) {
-      return { createdCount: 0, errors };
+    const warningErrors = warningRows.flatMap((row) =>
+      row.issues.map((issue) => ({ row: issue.row, message: issue.message })),
+    );
+
+    if (errors.length > 0 || warningErrors.length > 0) {
+      return { createdCount: 0, errors: [...errors, ...warningErrors] };
     }
 
     const createdMembers = await this.prisma.$transaction(
       validRows.map((row) =>
         this.prisma.member.create({
-          data: {
-            organizationId,
-            firstName: row.firstName.trim(),
-            lastName: this.optionalTrim(row.lastName),
-            phoneNumber: row.phoneNumber.trim(),
-            email: this.optionalTrim(row.email),
-            notes: this.optionalTrim(row.notes),
-          },
+          data: this.memberCreateData(organizationId, row),
         }),
       ),
     );
@@ -234,16 +256,137 @@ export class MembersService {
   }
 
   async dryRunImport(organizationId: string, dto: ImportMembersDto) {
-    const { validRows, errors, warnings } = await this.validateImportRows(
+    const { validRows, errorRows, warningRows } = await this.validateImportRows(
       organizationId,
       dto.rows,
     );
 
     return {
       validRows,
-      warningRows: warnings,
-      errorRows: errors,
+      warningRows,
+      errorRows,
     };
+  }
+
+  async confirmImport(organizationId: string, dto: ConfirmImportDto) {
+    const report = await this.validateImportRows(organizationId, dto.rows);
+
+    if (report.errorRows.length > 0) {
+      return {
+        createdCount: 0,
+        updatedCount: 0,
+        skippedCount: 0,
+        errors: report.errors,
+      };
+    }
+
+    const resolutionByRow = new Map(
+      dto.resolutions?.map((resolution) => [
+        resolution.row,
+        resolution.strategy,
+      ]) ?? [],
+    );
+    const rowsByNumber = new Map(
+      dto.rows.map((row, index) => [index + 1, row] as const),
+    );
+    const warningByRow = new Map(
+      report.warningRows.map((row) => [row.row, row] as const),
+    );
+    const createRows: ImportMemberRowDto[] = [...report.validRows];
+    const updateRows: Array<{ row: ImportMemberRowDto; memberId: string }> = [];
+    let skippedCount = 0;
+    const errors: Array<{ row: number; message: string }> = [];
+
+    for (const [rowNumber, warningRow] of warningByRow.entries()) {
+      const strategy =
+        resolutionByRow.get(rowNumber) ?? ImportDuplicateStrategy.SKIP_ROW;
+      const row = rowsByNumber.get(rowNumber);
+      const existingMember = warningRow.issues.find(
+        (issue) => issue.duplicateType === 'existing',
+      )?.existingMember;
+
+      if (!row) {
+        continue;
+      }
+
+      if (strategy === ImportDuplicateStrategy.SKIP_ROW) {
+        skippedCount += 1;
+        continue;
+      }
+
+      if (
+        strategy === ImportDuplicateStrategy.UPDATE_EXISTING &&
+        existingMember
+      ) {
+        updateRows.push({ row, memberId: existingMember.id });
+        continue;
+      }
+
+      if (strategy === ImportDuplicateStrategy.CREATE_NEW) {
+        if (existingMember?.phoneNumber === row.phoneNumber.trim()) {
+          errors.push({
+            row: rowNumber,
+            message:
+              'Cannot create a new member with a phone number that already exists',
+          });
+        } else {
+          createRows.push(row);
+        }
+      }
+    }
+
+    if (errors.length > 0) {
+      return { createdCount: 0, updatedCount: 0, skippedCount, errors };
+    }
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      const createdMembers = await Promise.all(
+        createRows.map((row) =>
+          tx.member.create({
+            data: this.memberCreateData(organizationId, row),
+          }),
+        ),
+      );
+
+      const updatedMembers = await Promise.all(
+        updateRows.map(({ row, memberId }) =>
+          tx.member.update({
+            where: { id: memberId },
+            data: {
+              firstName: row.firstName.trim(),
+              lastName: this.optionalTrim(row.lastName),
+              phoneNumber: row.phoneNumber.trim(),
+              email: this.optionalTrim(row.email),
+              notes: this.optionalTrim(row.notes),
+            },
+          }),
+        ),
+      );
+
+      await tx.timelineEvent.createMany({
+        data: [
+          ...createdMembers.map((member) => ({
+            organizationId,
+            memberId: member.id,
+            type: TimelineEventType.MEMBER_CREATED,
+            metadata: { source: 'csv_import' },
+          })),
+          ...updatedMembers.map((member) => ({
+            organizationId,
+            memberId: member.id,
+            type: TimelineEventType.MEMBER_UPDATED,
+            metadata: { source: 'csv_import_duplicate_resolution' },
+          })),
+        ],
+      });
+
+      return {
+        createdCount: createdMembers.length,
+        updatedCount: updatedMembers.length,
+      };
+    });
+
+    return { ...result, skippedCount, errors: [] };
   }
 
   private async ensureUniquePhone(organizationId: string, phoneNumber: string) {
@@ -268,50 +411,141 @@ export class MembersService {
     organizationId: string,
     rows: ImportMemberRowDto[],
   ) {
-    const seenPhones = new Set<string>();
+    const firstPhoneRow = new Map<string, number>();
+    const firstEmailRow = new Map<string, number>();
     const errors: Array<{ row: number; message: string }> = [];
-    const warnings: Array<{ row: number; message: string }> = [];
+    const errorRows: ImportReportRow[] = [];
+    const warningRows: ImportReportRow[] = [];
     const validRows: ImportMemberRowDto[] = [];
+    const candidateRows: ImportReportRow[] = [];
+    const phones = new Set<string>();
+    const emails = new Set<string>();
 
     rows.forEach((row, index) => {
       const rowNumber = index + 1;
       const phoneNumber = row.phoneNumber.trim();
+      const email = this.optionalTrim(row.email)?.toLowerCase();
+      const rowErrors: ImportIssue[] = [];
 
-      if (seenPhones.has(phoneNumber)) {
-        errors.push({
+      if (firstPhoneRow.has(phoneNumber)) {
+        rowErrors.push({
           row: rowNumber,
           message: 'Duplicate phone number in import file',
+          field: 'phoneNumber',
+          duplicateType: 'file',
         });
+      } else {
+        firstPhoneRow.set(phoneNumber, rowNumber);
+      }
+
+      if (email) {
+        if (firstEmailRow.has(email)) {
+          rowErrors.push({
+            row: rowNumber,
+            message: 'Duplicate email address in import file',
+            field: 'email',
+            duplicateType: 'file',
+          });
+        } else {
+          firstEmailRow.set(email, rowNumber);
+        }
+      }
+
+      if (rowErrors.length > 0) {
+        errorRows.push({ row: rowNumber, data: row, issues: rowErrors });
+        rowErrors.forEach((issue) =>
+          errors.push({ row: issue.row, message: issue.message }),
+        );
         return;
       }
 
-      seenPhones.add(phoneNumber);
-      validRows.push({ ...row, phoneNumber });
+      phones.add(phoneNumber);
+
+      if (email) {
+        emails.add(email);
+      }
+
+      candidateRows.push({
+        row: rowNumber,
+        data: { ...row, phoneNumber },
+        issues: [],
+      });
     });
 
     const existingMembers = await this.prisma.member.findMany({
       where: {
         organizationId,
         deletedAt: null,
-        phoneNumber: { in: [...seenPhones] },
+        OR: [
+          { phoneNumber: { in: [...phones] } },
+          { email: { in: [...emails] } },
+        ],
       },
-      select: { phoneNumber: true },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        phoneNumber: true,
+        email: true,
+      },
     });
-    const existingPhones = new Set(
-      existingMembers.map((member) => member.phoneNumber),
+    const membersByPhone = new Map(
+      existingMembers.map((member) => [member.phoneNumber, member]),
+    );
+    const membersByEmail = new Map(
+      existingMembers
+        .filter((member) => member.email)
+        .map((member) => [member.email!.toLowerCase(), member]),
     );
 
-    validRows.forEach((row, index) => {
-      if (existingPhones.has(row.phoneNumber)) {
-        const duplicate = {
-          row: index + 1,
+    candidateRows.forEach((reportRow) => {
+      const email = this.optionalTrim(reportRow.data.email)?.toLowerCase();
+      const existingPhoneMember = membersByPhone.get(
+        reportRow.data.phoneNumber,
+      );
+      const existingEmailMember = email ? membersByEmail.get(email) : undefined;
+
+      if (existingPhoneMember) {
+        reportRow.issues.push({
+          row: reportRow.row,
           message: 'Phone number already exists for this organization',
-        };
-        errors.push(duplicate);
-        warnings.push(duplicate);
+          field: 'phoneNumber',
+          duplicateType: 'existing',
+          existingMember: existingPhoneMember,
+        });
+      }
+
+      if (
+        existingEmailMember &&
+        existingEmailMember.id !== existingPhoneMember?.id
+      ) {
+        reportRow.issues.push({
+          row: reportRow.row,
+          message: 'Email address already exists for this organization',
+          field: 'email',
+          duplicateType: 'existing',
+          existingMember: existingEmailMember,
+        });
+      }
+
+      if (reportRow.issues.length > 0) {
+        warningRows.push(reportRow);
+      } else {
+        validRows.push(reportRow.data);
       }
     });
 
-    return { validRows, errors, warnings };
+    return { validRows, errors, errorRows, warningRows };
+  }
+
+  private memberCreateData(organizationId: string, row: ImportMemberRowDto) {
+    return {
+      organizationId,
+      firstName: row.firstName.trim(),
+      lastName: this.optionalTrim(row.lastName),
+      phoneNumber: row.phoneNumber.trim(),
+      email: this.optionalTrim(row.email),
+      notes: this.optionalTrim(row.notes),
+    };
   }
 }
