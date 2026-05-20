@@ -1,4 +1,5 @@
 import { PrismaPg } from '@prisma/adapter-pg';
+import { hash } from 'bcryptjs';
 import {
   BillingCycle,
   MemberStatus,
@@ -24,8 +25,10 @@ const connectionString =
 const adapter = new PrismaPg({ connectionString });
 const prisma = new PrismaClient({ adapter });
 
-const demoOrganizationSlug = 'demo-fitness-studio';
-const demoOwnerEmail = 'owner@demo.ironcore.local';
+const demoOrganizationSlug = 'peak-performance-gym';
+const legacyDemoOrganizationSlug = 'demo-fitness-studio';
+const demoOwnerEmail = 'john@peakperformance.local';
+const demoOwnerPassword = 'password123';
 
 type DemoMember = {
   firstName: string;
@@ -273,9 +276,12 @@ const startOfToday = () => {
   return today;
 };
 
-const clearDemoOrganization = async (tx: Prisma.TransactionClient) => {
+const clearOrganizationBySlug = async (
+  tx: Prisma.TransactionClient,
+  slug: string,
+) => {
   const organization = await tx.organization.findUnique({
-    where: { slug: demoOrganizationSlug },
+    where: { slug },
     select: { id: true },
   });
 
@@ -305,6 +311,11 @@ const clearDemoOrganization = async (tx: Prisma.TransactionClient) => {
   await tx.user.deleteMany({ where });
   await tx.member.deleteMany({ where });
   await tx.organization.delete({ where: { id: organization.id } });
+};
+
+const clearDemoOrganization = async (tx: Prisma.TransactionClient) => {
+  await clearOrganizationBySlug(tx, demoOrganizationSlug);
+  await clearOrganizationBySlug(tx, legacyDemoOrganizationSlug);
 };
 
 const workflowTemplates = (type: WorkflowType) => {
@@ -370,7 +381,7 @@ async function main() {
 
     const organization = await tx.organization.create({
       data: {
-        name: 'Demo Fitness Studio',
+        name: 'Peak Performance Gym',
         slug: demoOrganizationSlug,
       },
     });
@@ -379,7 +390,7 @@ async function main() {
       data: {
         organizationId: organization.id,
         email: demoOwnerEmail,
-        passwordHash: 'demo-password-hash-replace-before-auth-launch',
+        passwordHash: await hash(demoOwnerPassword, 12),
         role: UserRole.OWNER,
       },
     });
@@ -388,10 +399,10 @@ async function main() {
       {
         name: 'Starter',
         billingCycle: BillingCycle.MONTHLY,
-        amount: '15000.00',
+        amount: '65000.00',
       },
-      { name: 'Plus', billingCycle: BillingCycle.MONTHLY, amount: '25000.00' },
-      { name: 'Elite', billingCycle: BillingCycle.MONTHLY, amount: '40000.00' },
+      { name: 'Plus', billingCycle: BillingCycle.MONTHLY, amount: '90000.00' },
+      { name: 'Elite', billingCycle: BillingCycle.MONTHLY, amount: '120000.00' },
     ];
 
     const plans = new Map<string, Awaited<ReturnType<typeof tx.plan.create>>>();
