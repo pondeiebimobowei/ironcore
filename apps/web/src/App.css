@@ -4337,6 +4337,29 @@ td small {
   }
 }
 
+@media (max-width: 1380px) and (min-width: 901px) {
+  .workflow-dashboard-layout,
+  .workflow-create-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .workflow-side-column {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .workflow-summary-card {
+    position: static;
+  }
+
+  .workflow-table-card {
+    overflow-x: auto;
+  }
+
+  .workflow-table-row {
+    min-width: 980px;
+  }
+}
+
 @media (max-width: 640px) {
   .app-sidebar {
     padding: 14px;

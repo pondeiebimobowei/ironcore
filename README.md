@@ -25,7 +25,7 @@ The app is still intentionally scoped to the recovery MVP. It is not a gym manag
 
 ## Requirements
 
-- Node.js 20+
+- Node.js 22+
 - npm 10+
 - Git
 - Docker Desktop or another Docker-compatible runtime
@@ -112,6 +112,67 @@ npm run typecheck
 ```
 
 `npm run check-types` is kept as a compatibility alias for older starter scripts.
+
+## Production Deployment With Coolify
+
+Use Coolify's Docker Compose build pack with `docker/docker-compose.yml`.
+
+Recommended Coolify setup:
+
+1. Create a Docker Compose application from this repository.
+2. Set the compose file path to `docker/docker-compose.yml`.
+3. Configure the web domain to point at the `web` service on port `80`.
+4. Configure the API domain to point at the `api` service on port `4000`.
+5. Mark the public Vite variables as build-time variables in Coolify so the web image is built with production URLs.
+6. Run `npm run db:migrate:deploy --workspace=apps/api` against the production database before first traffic, or run it from the API container during a controlled release.
+
+Required production variables:
+
+```env
+POSTGRES_USER="..."
+POSTGRES_PASSWORD="..."
+POSTGRES_DB="ironcore_retain"
+DATABASE_URL="postgresql://USER:PASSWORD@db:5432/ironcore_retain"
+API_PORT=4000
+WEB_PORT=8080
+WEB_ORIGIN="https://app.example.com"
+VITE_API_URL="https://api.example.com"
+JWT_ACCESS_SECRET="use-a-long-random-secret"
+JWT_REFRESH_SECRET="use-a-long-random-secret"
+JWT_ACCESS_EXPIRY="15m"
+JWT_REFRESH_EXPIRY="7d"
+COOKIE_SECRET="use-a-long-random-secret"
+BCRYPT_ROUNDS=12
+WHATSAPP_PROVIDER="mock"
+```
+
+Optional production variables:
+
+```env
+GLITCHTIP_DSN=""
+VITE_GLITCHTIP_DSN=""
+VITE_POSTHOG_KEY=""
+VITE_POSTHOG_HOST="https://app.posthog.com"
+R2_ACCOUNT_ID=""
+R2_ACCESS_KEY_ID=""
+R2_SECRET_ACCESS_KEY=""
+R2_BUCKET_NAME="ironcore-payment-proofs"
+R2_BACKUP_BUCKET_NAME="ironcore-db-backups"
+```
+
+Health checks:
+
+- Web: `GET /health`
+- API: `GET /api/health`
+
+Deployment smoke test:
+
+```bash
+curl -fsS https://app.example.com/health
+curl -fsS https://api.example.com/api/health
+```
+
+Then sign in, open `/workflows`, run the protected workflow debug endpoint from an owner session, and confirm `MessageLog`, `JobRun`, and member timeline entries update as expected.
 
 ## Workspace Layout
 
