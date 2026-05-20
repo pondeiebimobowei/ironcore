@@ -1,26 +1,25 @@
-export type MemberFormInput = {
-  firstName: string;
-  lastName?: string;
-  phoneNumber: string;
-  email?: string;
-  expiryDate?: string;
-  notes?: string;
-};
+import { z } from "zod";
+
+const optionalText = z.string().optional();
+
+export const memberFormSchema = z.object({
+  firstName: z.string().trim().min(1, "First name is required."),
+  lastName: optionalText,
+  phoneNumber: z
+    .string()
+    .trim()
+    .min(7, "Phone number must be at least 7 characters."),
+  email: z
+    .union([z.literal(""), z.string().email("Email address is invalid.")])
+    .optional(),
+  expiryDate: optionalText,
+  notes: optionalText,
+});
+
+export type MemberFormInput = z.input<typeof memberFormSchema>;
 
 export function validateMemberInput(input: MemberFormInput) {
-  const errors: string[] = [];
+  const result = memberFormSchema.safeParse(input);
 
-  if (!input.firstName.trim()) {
-    errors.push("First name is required.");
-  }
-
-  if (input.phoneNumber.trim().length < 7) {
-    errors.push("Phone number must be at least 7 characters.");
-  }
-
-  if (input.email && !input.email.includes("@")) {
-    errors.push("Email address is invalid.");
-  }
-
-  return errors;
+  return result.success ? [] : result.error.issues.map((issue) => issue.message);
 }

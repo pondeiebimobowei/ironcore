@@ -1,8 +1,15 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { WorkflowStatus, WorkflowType } from '@prisma/client';
+import {
+  WorkflowStatus,
+  WorkflowType,
+  type Workflow,
+  type WorkflowStep,
+} from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { UpdateWorkflowDto } from './dto/update-workflow.dto';
 import { defaultWorkflowTemplates } from './default-workflow-templates';
+
+type WorkflowWithSteps = Workflow & { steps: WorkflowStep[] };
 
 @Injectable()
 export class WorkflowsService {
@@ -35,19 +42,7 @@ export class WorkflowsService {
     });
 
     if (workflows.length > 0) {
-      return workflows.map((workflow) => ({
-        id: workflow.id,
-        name: this.workflowName(workflow.type),
-        type: workflow.type,
-        status: workflow.status,
-        description: this.workflowDescription(workflow.type),
-        steps: workflow.steps.map((step) => ({
-          id: step.id,
-          dayOffset: step.dayOffset,
-          messageTemplate: step.messageTemplate,
-          createsTask: this.stepCreatesTask(workflow.type, step.dayOffset),
-        })),
-      }));
+      return workflows.map((workflow) => this.presentWorkflow(workflow));
     }
 
     return this.getDefaultWorkflows();
@@ -97,17 +92,21 @@ export class WorkflowsService {
       },
     });
 
+    return this.presentWorkflow(updated);
+  }
+
+  private presentWorkflow(workflow: WorkflowWithSteps) {
     return {
-      id: updated.id,
-      name: this.workflowName(updated.type),
-      type: updated.type,
-      status: updated.status,
-      description: this.workflowDescription(updated.type),
-      steps: updated.steps.map((step) => ({
+      id: workflow.id,
+      name: this.workflowName(workflow.type),
+      type: workflow.type,
+      status: workflow.status,
+      description: this.workflowDescription(workflow.type),
+      steps: workflow.steps.map((step) => ({
         id: step.id,
         dayOffset: step.dayOffset,
         messageTemplate: step.messageTemplate,
-        createsTask: this.stepCreatesTask(updated.type, step.dayOffset),
+        createsTask: this.stepCreatesTask(workflow.type, step.dayOffset),
       })),
     };
   }
