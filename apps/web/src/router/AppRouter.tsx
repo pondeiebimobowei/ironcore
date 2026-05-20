@@ -13,6 +13,7 @@ import { RecoveryQueuePage } from "../pages/recovery/RecoveryQueuePage";
 import { BillingPage } from "../pages/settings/BillingPage";
 import { OrganizationProfilePage } from "../pages/settings/OrganizationProfilePage";
 import { SettingsPage } from "../pages/settings/SettingsPage";
+import { TasksPage } from "../pages/tasks/TasksPage";
 import { WorkflowsPage } from "../pages/workflows/WorkflowsPage";
 import { ProtectedRoute } from "./ProtectedRoute";
 
@@ -37,6 +38,7 @@ export const router = createBrowserRouter([
           { path: "/payments/:paymentId", element: <PaymentDetailPage /> },
           { path: "/recovery", element: <RecoveryQueuePage /> },
           { path: "/workflows", element: <WorkflowsPage /> },
+          { path: "/tasks", element: <TasksPage /> },
           { path: "/settings", element: <SettingsPage /> },
           {
             path: "/settings/organization",
