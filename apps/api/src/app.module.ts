@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AdminModule } from './modules/admin/admin.module';
@@ -14,6 +15,7 @@ import { WorkflowsModule } from './modules/workflows/workflows.module';
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     AuthModule,
     MembersModule,
     OrganizationsModule,

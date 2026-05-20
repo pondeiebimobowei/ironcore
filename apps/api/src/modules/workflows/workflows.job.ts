@@ -1,4 +1,5 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Cron } from '@nestjs/schedule';
 import {
   JobRunStatus,
   MessageStatus,
@@ -37,11 +38,28 @@ type WorkflowJobError = {
 
 @Injectable()
 export class WorkflowsJob {
+  private readonly logger = new Logger(WorkflowsJob.name);
+
   constructor(
     private readonly prisma: PrismaService,
     @Inject(MESSAGING_PROVIDER)
     private readonly messagingProvider: MessagingProvider,
   ) {}
+
+  @Cron('0 3 * * *', { timeZone: 'Africa/Lagos' })
+  async runDailyWorkflowSchedule() {
+    const result = await this.runDueWorkflowSteps();
+
+    if (result.skipped) {
+      this.logger.log('Daily workflow run skipped because the lock is held.');
+      return;
+    }
+
+    this.logger.log(
+      `Daily workflow run finished with status ${result.status ?? 'UNKNOWN'}: ` +
+        `${result.processedCount} processed, ${result.errorCount} errors.`,
+    );
+  }
 
   async runDueWorkflowSteps(
     asOf: Date = new Date(),
