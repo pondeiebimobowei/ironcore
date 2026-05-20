@@ -25,7 +25,7 @@ The app is still intentionally scoped to the recovery MVP. It is not a gym manag
 
 ## Requirements
 
-- Node.js 22+
+- Node.js 20+
 - npm 10+
 - Git
 - Docker Desktop or another Docker-compatible runtime
