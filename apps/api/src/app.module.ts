@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { AdminModule } from './modules/admin/admin.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { JobsModule } from './modules/jobs/jobs.module';
@@ -22,6 +23,7 @@ import { WorkflowsModule } from './modules/workflows/workflows.module';
     PaymentsModule,
     TasksModule,
     WorkflowsModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [AppService],

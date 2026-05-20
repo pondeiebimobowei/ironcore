@@ -1,5 +1,14 @@
-import { Body, Controller, HttpCode, Post, Req, Res } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  HttpCode,
+  Post,
+  Req,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 import type { Request, Response } from 'express';
+import { AuthRateLimitGuard } from '../../common/guards/auth-rate-limit.guard';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { SignupDto } from './dto/signup.dto';
@@ -9,6 +18,7 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('signup')
+  @UseGuards(AuthRateLimitGuard)
   async signup(
     @Body() dto: SignupDto,
     @Res({ passthrough: true }) res: Response,
@@ -21,6 +31,7 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(200)
+  @UseGuards(AuthRateLimitGuard)
   async login(
     @Body() dto: LoginDto,
     @Res({ passthrough: true }) res: Response,
@@ -33,6 +44,7 @@ export class AuthController {
 
   @Post('refresh')
   @HttpCode(200)
+  @UseGuards(AuthRateLimitGuard)
   async refresh(
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,

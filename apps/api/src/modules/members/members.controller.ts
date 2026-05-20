@@ -51,6 +51,22 @@ export class MembersController {
     return this.membersService.import(this.organizationId(req), dto);
   }
 
+  @Post('import/dry-run')
+  dryRunImport(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: ImportMembersDto,
+  ) {
+    return this.membersService.dryRunImport(this.organizationId(req), dto);
+  }
+
+  @Post('import/confirm')
+  confirmImport(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: ImportMembersDto,
+  ) {
+    return this.membersService.import(this.organizationId(req), dto);
+  }
+
   @Get(':id')
   get(@Req() req: AuthenticatedRequest, @Param('id') id: string) {
     return this.membersService.get(this.organizationId(req), id);

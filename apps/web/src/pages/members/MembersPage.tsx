@@ -4,6 +4,8 @@ import { MemberImport } from "../../components/members/MemberImport";
 import { MemberTable } from "../../components/members/MemberTable";
 import { createMember, listMembers } from "../../features/members/api";
 import type { MemberStatus, MemberSummary } from "../../features/members/types";
+import { useAuth } from "../../lib/auth/AuthContext";
+import { captureEvent } from "../../lib/posthog/posthog";
 import type { MemberFormInput } from "../../lib/validations/member";
 
 const statuses: Array<{ value: MemberStatus | ""; label: string }> = [
@@ -17,6 +19,7 @@ const statuses: Array<{ value: MemberStatus | ""; label: string }> = [
 ];
 
 export function MembersPage() {
+  const { organization, user } = useAuth();
   const [members, setMembers] = useState<MemberSummary[]>([]);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<MemberStatus | "">("");
@@ -112,6 +115,9 @@ export function MembersPage() {
 
   const handleCreate = async (input: MemberFormInput) => {
     await createMember(input);
+    captureEvent("member_created", user?.id, {
+      organizationId: organization?.id,
+    });
     await loadMembers();
     setActivePanel(null);
   };
@@ -153,7 +159,11 @@ export function MembersPage() {
           {activePanel === "add" ? (
             <MemberForm onSubmit={handleCreate} />
           ) : (
-            <MemberImport onImported={loadMembers} />
+            <MemberImport
+              onImported={loadMembers}
+              analyticsUserId={user?.id}
+              analyticsOrganizationId={organization?.id}
+            />
           )}
         </section>
       ) : null}

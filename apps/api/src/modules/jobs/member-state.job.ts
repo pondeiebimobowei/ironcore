@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { JobRunStatus, MemberStatus, TaskType } from '@prisma/client';
+import { glitchTipReporter } from '../../lib/monitoring/glitchtip';
 import { PrismaService } from '../database/prisma.service';
 import { MembershipStateService } from '../memberships/membership-state.service';
 import { TasksService } from '../tasks/tasks.service';
@@ -173,6 +174,10 @@ export class MemberStateJob {
         };
       } catch (error: unknown) {
         errorCount += 1;
+        glitchTipReporter.captureException(error, {
+          mechanism: MEMBER_STATE_JOB_NAME,
+          tags: { jobName: MEMBER_STATE_JOB_NAME },
+        });
 
         if (jobRunId) {
           await tx.jobRun.update({

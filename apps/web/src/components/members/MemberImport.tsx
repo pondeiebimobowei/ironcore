@@ -2,12 +2,19 @@ import { useState } from "react";
 import type { ChangeEvent } from "react";
 import { parseMembersCsv } from "../../features/members/csv";
 import { importMembers } from "../../features/members/api";
+import { captureEvent } from "../../lib/posthog/posthog";
 
 type MemberImportProps = {
   onImported: () => Promise<void>;
+  analyticsUserId?: string;
+  analyticsOrganizationId?: string;
 };
 
-export function MemberImport({ onImported }: MemberImportProps) {
+export function MemberImport({
+  onImported,
+  analyticsUserId,
+  analyticsOrganizationId,
+}: MemberImportProps) {
   const [message, setMessage] = useState(
     "CSV headers: firstName,lastName,phoneNumber,email,expiryDate,notes",
   );
@@ -39,6 +46,10 @@ export function MemberImport({ onImported }: MemberImportProps) {
     );
 
     if (result.errors.length === 0) {
+      captureEvent("members_imported", analyticsUserId, {
+        organizationId: analyticsOrganizationId,
+        createdCount: result.createdCount,
+      });
       await onImported();
     }
   };

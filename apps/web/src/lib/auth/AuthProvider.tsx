@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { apiClient } from "../api/client";
+import { captureEvent } from "../posthog/posthog";
 import { AuthContext } from "./AuthContext";
 import type {
   AuthContextValue,
@@ -64,6 +65,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           input,
         );
         applySession(response.data);
+        captureEvent("user_logged_in", response.data.user.id, {
+          organizationId: response.data.organization.id,
+        });
       },
       async signup(input) {
         const response = await apiClient.post<AuthSession>(
@@ -71,10 +75,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           input,
         );
         applySession(response.data);
+        captureEvent("organization_signed_up", response.data.user.id, {
+          organizationId: response.data.organization.id,
+        });
       },
       updateOrganization,
       refresh,
       async logout() {
+        if (user) {
+          captureEvent("user_logged_out", user.id, {
+            organizationId: organization?.id,
+          });
+        }
         await apiClient.post("/api/auth/logout").catch(() => undefined);
         clearSession();
       },

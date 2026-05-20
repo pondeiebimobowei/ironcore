@@ -196,46 +196,10 @@ export class MembersService {
   }
 
   async import(organizationId: string, dto: ImportMembersDto) {
-    const seenPhones = new Set<string>();
-    const errors: Array<{ row: number; message: string }> = [];
-    const validRows: ImportMemberRowDto[] = [];
-
-    dto.rows.forEach((row, index) => {
-      const rowNumber = index + 1;
-      const phoneNumber = row.phoneNumber.trim();
-
-      if (seenPhones.has(phoneNumber)) {
-        errors.push({
-          row: rowNumber,
-          message: 'Duplicate phone number in import file',
-        });
-        return;
-      }
-
-      seenPhones.add(phoneNumber);
-      validRows.push({ ...row, phoneNumber });
-    });
-
-    const existingMembers = await this.prisma.member.findMany({
-      where: {
-        organizationId,
-        deletedAt: null,
-        phoneNumber: { in: [...seenPhones] },
-      },
-      select: { phoneNumber: true },
-    });
-    const existingPhones = new Set(
-      existingMembers.map((member) => member.phoneNumber),
+    const { validRows, errors } = await this.validateImportRows(
+      organizationId,
+      dto.rows,
     );
-
-    validRows.forEach((row, index) => {
-      if (existingPhones.has(row.phoneNumber)) {
-        errors.push({
-          row: index + 1,
-          message: 'Phone number already exists for this organization',
-        });
-      }
-    });
 
     if (errors.length > 0) {
       return { createdCount: 0, errors };
@@ -268,6 +232,19 @@ export class MembersService {
     return { createdCount: createdMembers.length, errors: [] };
   }
 
+  async dryRunImport(organizationId: string, dto: ImportMembersDto) {
+    const { validRows, errors, warnings } = await this.validateImportRows(
+      organizationId,
+      dto.rows,
+    );
+
+    return {
+      validRows,
+      warningRows: warnings,
+      errorRows: errors,
+    };
+  }
+
   private async ensureUniquePhone(organizationId: string, phoneNumber: string) {
     const existing = await this.prisma.member.findFirst({
       where: { organizationId, phoneNumber, deletedAt: null },
@@ -284,5 +261,56 @@ export class MembersService {
     const trimmed = value?.trim();
 
     return trimmed ? trimmed : undefined;
+  }
+
+  private async validateImportRows(
+    organizationId: string,
+    rows: ImportMemberRowDto[],
+  ) {
+    const seenPhones = new Set<string>();
+    const errors: Array<{ row: number; message: string }> = [];
+    const warnings: Array<{ row: number; message: string }> = [];
+    const validRows: ImportMemberRowDto[] = [];
+
+    rows.forEach((row, index) => {
+      const rowNumber = index + 1;
+      const phoneNumber = row.phoneNumber.trim();
+
+      if (seenPhones.has(phoneNumber)) {
+        errors.push({
+          row: rowNumber,
+          message: 'Duplicate phone number in import file',
+        });
+        return;
+      }
+
+      seenPhones.add(phoneNumber);
+      validRows.push({ ...row, phoneNumber });
+    });
+
+    const existingMembers = await this.prisma.member.findMany({
+      where: {
+        organizationId,
+        deletedAt: null,
+        phoneNumber: { in: [...seenPhones] },
+      },
+      select: { phoneNumber: true },
+    });
+    const existingPhones = new Set(
+      existingMembers.map((member) => member.phoneNumber),
+    );
+
+    validRows.forEach((row, index) => {
+      if (existingPhones.has(row.phoneNumber)) {
+        const duplicate = {
+          row: index + 1,
+          message: 'Phone number already exists for this organization',
+        };
+        errors.push(duplicate);
+        warnings.push(duplicate);
+      }
+    });
+
+    return { validRows, errors, warnings };
   }
 }

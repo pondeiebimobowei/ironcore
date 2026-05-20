@@ -8,7 +8,11 @@ import {
 } from "../../features/payments/api";
 import type { Payment } from "../../features/payments/types";
 
+import { useAuth } from "../../lib/auth/AuthContext";
+import { captureEvent } from "../../lib/posthog/posthog";
+
 export function PaymentDetailPage() {
+  const { organization, user } = useAuth();
   const { paymentId } = useParams();
   const [payment, setPayment] = useState<Payment | null>(null);
   const [error, setError] = useState("");
@@ -39,7 +43,15 @@ export function PaymentDetailPage() {
       return;
     }
 
-    setPayment(await verifyPayment(paymentId));
+    const verifiedPayment = await verifyPayment(paymentId);
+    setPayment(verifiedPayment);
+    captureEvent("payment_verified", user?.id, {
+      organizationId: organization?.id,
+      paymentId,
+      amount: Number(
+        verifiedPayment.amountPaid ?? verifiedPayment.amountExpected,
+      ),
+    });
   };
 
   const handleReject = async (reason: string) => {
@@ -48,6 +60,10 @@ export function PaymentDetailPage() {
     }
 
     setPayment(await rejectPayment(paymentId, reason));
+    captureEvent("payment_rejected", user?.id, {
+      organizationId: organization?.id,
+      paymentId,
+    });
   };
 
   if (error) {

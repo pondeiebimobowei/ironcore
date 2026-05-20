@@ -1,5 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, TaskStatus, TaskType, TimelineEventType } from '@prisma/client';
+import {
+  Prisma,
+  TaskStatus,
+  TaskType,
+  TimelineEventType,
+} from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';

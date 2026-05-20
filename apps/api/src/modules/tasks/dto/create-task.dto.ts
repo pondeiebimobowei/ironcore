@@ -1,6 +1,12 @@
 import { TaskType } from '@prisma/client';
 import { Transform } from 'class-transformer';
-import { IsDateString, IsEnum, IsOptional, IsString, MinLength } from 'class-validator';
+import {
+  IsDateString,
+  IsEnum,
+  IsOptional,
+  IsString,
+  MinLength,
+} from 'class-validator';
 import { emptyStringToUndefined } from '../../members/dto/empty-string-to-undefined';
 
 export class CreateTaskDto {

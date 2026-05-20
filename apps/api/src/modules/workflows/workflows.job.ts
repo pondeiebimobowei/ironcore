@@ -10,6 +10,7 @@ import {
 } from '@prisma/client';
 import { MESSAGING_PROVIDER } from '../../lib/messaging/provider';
 import type { MessagingProvider } from '../../lib/messaging/provider';
+import { glitchTipReporter } from '../../lib/monitoring/glitchtip';
 import { PrismaService } from '../database/prisma.service';
 import { defaultWorkflowTemplates } from './default-workflow-templates';
 
@@ -204,6 +205,10 @@ export class WorkflowsJob {
       };
     } catch (error: unknown) {
       errorCount += 1;
+      glitchTipReporter.captureException(error, {
+        mechanism: WORKFLOW_JOB_NAME,
+        tags: { jobName: WORKFLOW_JOB_NAME },
+      });
 
       if (jobRunId) {
         await this.prisma.jobRun.update({

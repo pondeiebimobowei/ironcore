@@ -8,6 +8,7 @@ import {
   MembershipStatus,
   PaymentMethod,
   PaymentStatus,
+  TaskStatus,
   TaskType,
   TimelineEventType,
 } from '@prisma/client';
@@ -201,6 +202,35 @@ export class PaymentsService {
           metadata: { paymentId: payment.id, verifiedById },
         },
       });
+
+      const verificationTasks = await tx.task.findMany({
+        where: {
+          organizationId,
+          memberId: payment.memberId,
+          type: TaskType.VERIFY_PAYMENT,
+          status: { in: [TaskStatus.OPEN, TaskStatus.IN_PROGRESS] },
+        },
+        select: { id: true },
+      });
+
+      for (const task of verificationTasks) {
+        await tx.task.update({
+          where: { id: task.id },
+          data: { status: TaskStatus.COMPLETED },
+        });
+        await tx.timelineEvent.create({
+          data: {
+            organizationId,
+            memberId: payment.memberId,
+            type: TimelineEventType.TASK_COMPLETED,
+            metadata: {
+              taskId: task.id,
+              paymentId: payment.id,
+              source: 'payment_verified',
+            },
+          },
+        });
+      }
 
       return updatedPayment;
     });

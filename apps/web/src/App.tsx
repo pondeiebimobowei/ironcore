@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "./lib/auth/AuthContext";
 import "./App.css";
@@ -13,6 +14,7 @@ const navigationItems = [
 
 export function AppLayout() {
   const auth = useAuth();
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
   if (!auth.isAuthenticated) {
     return (
@@ -32,7 +34,7 @@ export function AppLayout() {
       .toUpperCase() || "IC";
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${isMobileNavOpen ? "nav-open" : ""}`}>
       <aside className="app-sidebar">
         <NavLink to="/" className="brand">
           <span className="brand-mark">IC</span>
@@ -41,9 +43,18 @@ export function AppLayout() {
             <small>Retain</small>
           </span>
         </NavLink>
-        <nav className="sidebar-nav" aria-label="Primary navigation">
+        <nav
+          className="sidebar-nav"
+          id="primary-navigation"
+          aria-label="Primary navigation"
+        >
           {navigationItems.map((item) => (
-            <NavLink to={item.to} key={item.to} end={item.to === "/"}>
+            <NavLink
+              to={item.to}
+              key={item.to}
+              end={item.to === "/"}
+              onClick={() => setIsMobileNavOpen(false)}
+            >
               <span className="nav-icon" aria-hidden="true">
                 {item.icon}
               </span>
@@ -67,6 +78,15 @@ export function AppLayout() {
       </aside>
       <div className="app-main">
         <header className="topbar">
+          <button
+            className="mobile-menu-button"
+            type="button"
+            aria-expanded={isMobileNavOpen}
+            aria-controls="primary-navigation"
+            onClick={() => setIsMobileNavOpen((isOpen) => !isOpen)}
+          >
+            Menu
+          </button>
           <label className="global-search">
             <span aria-hidden="true">/</span>
             <input placeholder="Search members by name or phone..." />
