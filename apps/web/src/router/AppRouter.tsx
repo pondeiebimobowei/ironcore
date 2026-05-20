@@ -7,6 +7,8 @@ import { MemberDetailPage } from "../pages/members/MemberDetailPage";
 import { MembersPage } from "../pages/members/MembersPage";
 import { PaymentDetailPage } from "../pages/payments/PaymentDetailPage";
 import { PaymentsPage } from "../pages/payments/PaymentsPage";
+import { RecordPaymentPage } from "../pages/payments/RecordPaymentPage";
+import { RecordPaymentSuccessPage } from "../pages/payments/RecordPaymentSuccessPage";
 import { RecoveryQueuePage } from "../pages/recovery/RecoveryQueuePage";
 import { BillingPage } from "../pages/settings/BillingPage";
 import { OrganizationProfilePage } from "../pages/settings/OrganizationProfilePage";
@@ -27,6 +29,11 @@ export const router = createBrowserRouter([
           { path: "/members", element: <MembersPage /> },
           { path: "/members/:memberId", element: <MemberDetailPage /> },
           { path: "/payments", element: <PaymentsPage /> },
+          { path: "/payments/record", element: <RecordPaymentPage /> },
+          {
+            path: "/payments/record/success/:paymentId",
+            element: <RecordPaymentSuccessPage />,
+          },
           { path: "/payments/:paymentId", element: <PaymentDetailPage /> },
           { path: "/recovery", element: <RecoveryQueuePage /> },
           { path: "/workflows", element: <WorkflowsPage /> },

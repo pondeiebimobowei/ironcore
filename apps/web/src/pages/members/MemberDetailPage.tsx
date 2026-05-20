@@ -97,6 +97,12 @@ export function MemberDetailPage() {
             ))}
           </select>
         </label>
+        <Link
+          to={`/payments/record?memberId=${member.id}`}
+          className="primary-button"
+        >
+          Record Payment
+        </Link>
       </header>
       <section className="split-layout">
         <div className="detail-stack">

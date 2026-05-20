@@ -1,5 +1,5 @@
 import { apiClient } from "../../lib/api/client";
-import type { Payment } from "./types";
+import type { CreatePaymentInput, Payment } from "./types";
 
 export async function listPayments() {
   const response = await apiClient.get<Payment[]>("/api/payments");
@@ -9,6 +9,12 @@ export async function listPayments() {
 
 export async function getPayment(paymentId: string) {
   const response = await apiClient.get<Payment>(`/api/payments/${paymentId}`);
+
+  return response.data;
+}
+
+export async function createPayment(input: CreatePaymentInput) {
+  const response = await apiClient.post<Payment>("/api/payments", input);
 
   return response.data;
 }

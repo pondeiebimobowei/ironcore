@@ -83,8 +83,8 @@ function dueLabel(task: Task) {
 function recoveryLink(task: Task) {
   if (task.type === "VERIFY_PAYMENT") {
     return {
-      to: "/payments",
-      label: "Review payments",
+      to: `/payments/record?memberId=${task.memberId}`,
+      label: "Record payment",
     };
   }
 

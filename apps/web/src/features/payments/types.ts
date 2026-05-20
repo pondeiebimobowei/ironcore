@@ -37,3 +37,14 @@ export type Payment = {
     plan?: { name: string } | null;
   } | null;
 };
+
+export type CreatePaymentInput = {
+  memberId: string;
+  membershipId?: string;
+  amountExpected: string;
+  amountPaid?: string;
+  proofUrl?: string;
+  method?: PaymentMethod;
+  reference?: string;
+  notes?: string;
+};

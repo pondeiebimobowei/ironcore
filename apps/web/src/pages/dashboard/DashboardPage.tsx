@@ -448,7 +448,7 @@ export function DashboardPage() {
               <div className="quick-actions-grid">
                 <Link to="/members">Add Member</Link>
                 <Link to="/members">Import Members</Link>
-                <Link to="/payments">Record Payment</Link>
+                <Link to="/payments/record">Record Payment</Link>
                 <Link to="/workflows">Send Message</Link>
               </div>
             </article>
