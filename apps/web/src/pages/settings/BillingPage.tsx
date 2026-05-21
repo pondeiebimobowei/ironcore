@@ -5,6 +5,7 @@ import {
   usageItems,
 } from "../../features/organizations/billing";
 import { useAuth } from "../../lib/auth/AuthContext";
+import { supportMailto } from "../../lib/support/contact";
 
 export function BillingPage() {
   const { organization } = useAuth();
@@ -44,7 +45,7 @@ export function BillingPage() {
           <h2>
             Pilot Plan <small>Active</small>
           </h2>
-          <p>For growing gyms getting started with member retention.</p>
+          <p>Manual pilot billing for member retention recovery.</p>
           <button type="button" className="link-button">
             View Plan Details
           </button>
@@ -63,8 +64,8 @@ export function BillingPage() {
         </div>
         <div className="billing-plan-stat">
           <span>Next Billing Date</span>
-          <strong>May 5, 2025</strong>
-          <small>in 12 days</small>
+          <strong>Jun 5, 2026</strong>
+          <small>Manual invoice</small>
         </div>
         <button type="button" className="secondary-button">
           Manage Plan
@@ -152,14 +153,14 @@ export function BillingPage() {
           <section className="settings-panel compact-billing-card">
             <header>
               <h2>Payment Method</h2>
-              <button type="button" className="secondary-button">
-                Add Payment Method
-              </button>
+              <a href={supportMailto} className="secondary-button">
+                Contact Support
+              </a>
             </header>
             <div className="payment-method-row">
-              <strong>Visa ending in 4242</strong>
+              <strong>Manual bank transfer</strong>
               <span className="status status-active">Primary</span>
-              <small>Expires 04/27</small>
+              <small>No payment processor connected</small>
             </div>
           </section>
 
@@ -210,9 +211,9 @@ export function BillingPage() {
               If you have any questions about billing or payments, our support
               team is here to help.
             </p>
-            <button type="button" className="secondary-button">
+            <a href={supportMailto} className="secondary-button">
               Contact Support
-            </button>
+            </a>
           </section>
         </aside>
       </div>

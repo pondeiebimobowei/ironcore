@@ -2628,42 +2628,42 @@ Phase 9 complete.
 
 ## UX Checklist
 
-- [ ] Clear dashboard hierarchy
-- [ ] Useful empty states
-- [ ] Loading states
-- [ ] Error states
-- [ ] Consistent status badges
-- [ ] Tables readable
-- [ ] Import flow understandable
-- [ ] Core value visible quickly
-- [ ] User always knows next action
-- [ ] Mobile layout usable enough for MVP
+- [x] Clear dashboard hierarchy
+- [x] Useful empty states
+- [x] Loading states
+- [x] Error states
+- [x] Consistent status badges
+- [x] Tables readable
+- [x] Import flow understandable
+- [x] Core value visible quickly
+- [x] User always knows next action
+- [x] Mobile layout usable enough for MVP
 
 ---
 
 ## Security Checklist
 
-- [ ] Auth protected routes
-- [ ] Organization-scoped queries
-- [ ] No secrets exposed
-- [ ] Input validation
-- [ ] Soft deletes where needed
-- [ ] Timeline audit history
-- [ ] File upload validation if enabled
-- [ ] Rate limits for sensitive endpoints
+- [x] Auth protected routes
+- [x] Organization-scoped queries
+- [x] No secrets exposed
+- [x] Input validation
+- [x] Soft deletes where needed
+- [x] Timeline audit history
+- [x] File upload validation if enabled
+- [x] Rate limits for sensitive endpoints
 
 ---
 
 ## Deployment Checklist
 
 - [ ] Coolify project configured
-- [ ] Docker Compose build verified
+- [x] Docker Compose build verified
 - [ ] Production database configured and volume persisted
 - [ ] Environment variables set in Coolify
 - [ ] Prisma migrations run on deploy
 - [ ] SSL provisioned (Let's Encrypt via Coolify)
-- [ ] GlitchTip enabled
-- [ ] PostHog enabled
+- [x] GlitchTip enabled
+- [x] PostHog enabled
 - [ ] Smoke test completed
 - [ ] Backups enabled
 
@@ -2671,14 +2671,14 @@ Phase 9 complete.
 
 ## Launch-Readiness Checklist
 
-- [ ] Demo data available
+- [x] Demo data available
 - [ ] First pilot onboarding flow tested
-- [ ] Manual recovery workflow can run
-- [ ] Dashboard proves recovered revenue
-- [ ] Known limitations documented
-- [ ] README complete
-- [ ] Support/contact path available
-- [ ] Pilot feedback capture process ready
+- [x] Manual recovery workflow can run
+- [x] Dashboard proves recovered revenue
+- [x] Known limitations documented
+- [x] README complete
+- [x] Support/contact path available
+- [x] Pilot feedback capture process ready
 
 ---
 

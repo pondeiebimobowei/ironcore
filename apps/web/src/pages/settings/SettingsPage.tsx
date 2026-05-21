@@ -5,6 +5,7 @@ import {
   settingsShortcuts,
   settingsTabs,
 } from "../../features/organizations/settings";
+import { supportEmail, supportMailto } from "../../lib/support/contact";
 
 const sideCards = [
   {
@@ -140,12 +141,12 @@ export function SettingsPage() {
 
       <section className="settings-export">
         <div>
-          <h2>Export Data</h2>
-          <p>Download a copy of your gym data.</p>
+          <h2>Support</h2>
+          <p>{supportEmail}</p>
         </div>
-        <button type="button" className="secondary-button">
-          Export Data
-        </button>
+        <a href={supportMailto} className="secondary-button">
+          Contact Support
+        </a>
       </section>
     </main>
   );

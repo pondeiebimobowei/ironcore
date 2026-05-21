@@ -196,6 +196,14 @@ export function DashboardPage() {
         <section className="dashboard-state">
           <strong>No revenue recovery data yet</strong>
           <span>Import members and run the state engine to populate metrics.</span>
+          <div className="state-actions">
+            <Link to="/members" className="primary-button">
+              Import Members
+            </Link>
+            <Link to="/recovery" className="secondary-button">
+              View Recovery Queue
+            </Link>
+          </div>
         </section>
       ) : (
         <div className="dashboard-workspace">
@@ -298,20 +306,29 @@ export function DashboardPage() {
             <article className="dashboard-card risk-card">
               <DashboardCardHeader title="Top Revenue Risks" to="/members" />
               <div className="risk-list">
-                {summary.topRevenueRisks.map((risk) => (
-                  <Link
-                    to={`/members/${risk.memberId}`}
-                    className="risk-row"
-                    key={risk.memberId}
-                  >
-                    <span className="dashboard-avatar">{initials(risk.name)}</span>
-                    <span>
-                      <strong>{risk.name}</strong>
-                      <small>{risk.detail}</small>
-                    </span>
-                    <b>{formatCurrency(risk.amount)}</b>
-                  </Link>
-                ))}
+                {summary.topRevenueRisks.length > 0 ? (
+                  summary.topRevenueRisks.map((risk) => (
+                    <Link
+                      to={`/members/${risk.memberId}`}
+                      className="risk-row"
+                      key={risk.memberId}
+                    >
+                      <span className="dashboard-avatar">
+                        {initials(risk.name)}
+                      </span>
+                      <span>
+                        <strong>{risk.name}</strong>
+                        <small>{risk.detail}</small>
+                      </span>
+                      <b>{formatCurrency(risk.amount)}</b>
+                    </Link>
+                  ))
+                ) : (
+                  <section className="empty-state compact-empty-state">
+                    <strong>No high-risk members</strong>
+                    <span>New overdue or expiring memberships appear here.</span>
+                  </section>
+                )}
               </div>
               <div className="risk-total">
                 <span>Total</span>
@@ -329,20 +346,27 @@ export function DashboardPage() {
             <article className="dashboard-card activity-card">
               <DashboardCardHeader title="Recent Activity" to="/members" />
               <div className="activity-list">
-                {summary.recentActivity.map((activity) => (
-                  <div className="activity-row" key={activity.id}>
-                    <span
-                      className={`activity-icon activity-${activity.type.toLowerCase()}`}
-                    >
-                      {activity.title[0]}
-                    </span>
-                    <span>
-                      <strong>{activity.title}</strong>
-                      <small>{activity.detail}</small>
-                    </span>
-                    <time>{formatRelativeTime(activity.occurredAt)}</time>
-                  </div>
-                ))}
+                {summary.recentActivity.length > 0 ? (
+                  summary.recentActivity.map((activity) => (
+                    <div className="activity-row" key={activity.id}>
+                      <span
+                        className={`activity-icon activity-${activity.type.toLowerCase()}`}
+                      >
+                        {activity.title[0]}
+                      </span>
+                      <span>
+                        <strong>{activity.title}</strong>
+                        <small>{activity.detail}</small>
+                      </span>
+                      <time>{formatRelativeTime(activity.occurredAt)}</time>
+                    </div>
+                  ))
+                ) : (
+                  <section className="empty-state compact-empty-state">
+                    <strong>No recent activity</strong>
+                    <span>Imports, payment decisions, and messages appear here.</span>
+                  </section>
+                )}
               </div>
             </article>
 
@@ -365,51 +389,58 @@ export function DashboardPage() {
                 </span>
               </div>
               <div className="dashboard-table-wrap">
-                <table className="dashboard-queue-table">
-                  <thead>
-                    <tr>
-                      <th>Member</th>
-                      <th>Status</th>
-                      <th>Days Overdue</th>
-                      <th>Amount</th>
-                      <th>Next Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {summary.recoveryQueue.items.map((item) => (
-                      <tr key={item.taskId}>
-                        <td data-label="Member">
-                          <Link
-                            to={`/members/${item.memberId}`}
-                            className="member-cell compact-member-cell"
-                          >
-                            <span className="dashboard-avatar">
-                              {initials(item.name)}
-                            </span>
-                            <span>
-                              <strong>{item.name}</strong>
-                              <small>{item.phoneNumber}</small>
-                            </span>
-                          </Link>
-                        </td>
-                        <td data-label="Status">
-                          <span
-                            className={`status status-${item.status.toLowerCase()}`}
-                          >
-                            {item.status.replaceAll("_", " ")}
-                          </span>
-                        </td>
-                        <td data-label="Days Overdue">{item.daysOverdue} days</td>
-                        <td data-label="Amount">{formatCurrency(item.amount)}</td>
-                        <td data-label="Next Action">
-                          <button type="button" className="link-button">
-                            {item.nextAction}
-                          </button>
-                        </td>
+                {summary.recoveryQueue.items.length > 0 ? (
+                  <table className="dashboard-queue-table">
+                    <thead>
+                      <tr>
+                        <th>Member</th>
+                        <th>Status</th>
+                        <th>Days Overdue</th>
+                        <th>Amount</th>
+                        <th>Next Action</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {summary.recoveryQueue.items.map((item) => (
+                        <tr key={item.taskId}>
+                          <td data-label="Member">
+                            <Link
+                              to={`/members/${item.memberId}`}
+                              className="member-cell compact-member-cell"
+                            >
+                              <span className="dashboard-avatar">
+                                {initials(item.name)}
+                              </span>
+                              <span>
+                                <strong>{item.name}</strong>
+                                <small>{item.phoneNumber}</small>
+                              </span>
+                            </Link>
+                          </td>
+                          <td data-label="Status">
+                            <span
+                              className={`status status-${item.status.toLowerCase()}`}
+                            >
+                              {item.status.replaceAll("_", " ")}
+                            </span>
+                          </td>
+                          <td data-label="Days Overdue">{item.daysOverdue} days</td>
+                          <td data-label="Amount">{formatCurrency(item.amount)}</td>
+                          <td data-label="Next Action">
+                            <Link to="/recovery" className="link-button">
+                              {item.nextAction}
+                            </Link>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <section className="empty-state compact-empty-state">
+                    <strong>No recovery tasks queued</strong>
+                    <span>Run member state updates to generate next actions.</span>
+                  </section>
+                )}
               </div>
             </article>
 

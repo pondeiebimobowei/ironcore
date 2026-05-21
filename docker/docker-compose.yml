@@ -36,6 +36,7 @@ services:
       dockerfile: docker/Dockerfile.web
       args:
         VITE_API_URL: ${VITE_API_URL:-http://localhost:4000}
+        VITE_SUPPORT_EMAIL: ${VITE_SUPPORT_EMAIL:-support@ironcore-retain.local}
         VITE_GLITCHTIP_DSN: ${VITE_GLITCHTIP_DSN:-}
         VITE_POSTHOG_KEY: ${VITE_POSTHOG_KEY:-}
         VITE_POSTHOG_HOST: ${VITE_POSTHOG_HOST:-https://app.posthog.com}

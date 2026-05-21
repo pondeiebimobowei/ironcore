@@ -592,6 +592,20 @@ td span,
   font-size: 15px;
 }
 
+.state-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.state-actions .primary-button,
+.state-actions .secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .toolbar,
 .form-grid {
   display: grid;
@@ -1158,6 +1172,11 @@ td small {
 .empty-state {
   display: grid;
   gap: 6px;
+}
+
+.compact-empty-state {
+  min-height: 104px;
+  align-content: center;
 }
 
 .empty-state strong {
@@ -2417,6 +2436,13 @@ td small {
 .settings-row select,
 .settings-row button {
   justify-self: end;
+}
+
+.settings-export .secondary-button,
+.compact-billing-card .secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .settings-side {

@@ -137,6 +137,7 @@ API_PORT=4000
 WEB_PORT=8080
 WEB_ORIGIN="https://app.example.com"
 VITE_API_URL="https://api.example.com"
+VITE_SUPPORT_EMAIL="support@example.com"
 JWT_ACCESS_SECRET="use-a-long-random-secret"
 JWT_REFRESH_SECRET="use-a-long-random-secret"
 JWT_ACCESS_EXPIRY="15m"
@@ -240,6 +241,8 @@ During pilot onboarding, capture:
 - confusing screens or missing next actions
 
 Use this feedback to refine the recovery loop before adding non-MVP gym management features.
+
+See [doc/launch-readiness.md](doc/launch-readiness.md) for the Phase 10 QA, deployment, support, and pilot-readiness checklist.
 
 ## Execution Rules
 
