@@ -6,10 +6,23 @@ datasource db {
   provider = "postgresql"
 }
 
-enum UserRole {
+enum OrganizationRole {
   OWNER
   ADMIN
   STAFF
+}
+
+enum OrganizationMembershipStatus {
+  INVITED
+  ACTIVE
+  DISABLED
+}
+
+enum OrganizationInvitationStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+  EXPIRED
 }
 
 enum MemberStatus {
@@ -124,36 +137,81 @@ model Organization {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users          User[]
-  members        Member[]
-  plans          Plan[]
-  memberships    Membership[]
-  payments       Payment[]
-  workflows      Workflow[]
-  workflowSteps  WorkflowStep[]
-  messageLogs    MessageLog[]
-  tasks          Task[]
-  timelineEvents TimelineEvent[]
+  organizationMemberships OrganizationMembership[]
+  organizationInvitations OrganizationInvitation[]
+  members                 Member[]
+  plans                   Plan[]
+  memberships             Membership[]
+  payments                Payment[]
+  workflows               Workflow[]
+  workflowSteps           WorkflowStep[]
+  messageLogs             MessageLog[]
+  tasks                   Task[]
+  timelineEvents          TimelineEvent[]
 
   @@index([slug])
 }
 
 model User {
-  id             String   @id @default(cuid())
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  organizationMemberships OrganizationMembership[] @relation("OrganizationMembershipUser")
+  invitationsSent         OrganizationMembership[] @relation("OrganizationMembershipInvitedBy")
+  organizationInvitations OrganizationInvitation[] @relation("OrganizationInvitationInvitedBy")
+  refreshTokens           RefreshToken[]
+  verifiedPayments        Payment[]                @relation("PaymentVerifiedBy")
+  assignedTasks           Task[]                   @relation("TaskAssignedTo")
+}
+
+model OrganizationMembership {
+  id             String                       @id @default(cuid())
   organizationId String
-  email          String   @unique
-  passwordHash   String
-  role           UserRole @default(STAFF)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  userId         String
+  role           OrganizationRole             @default(STAFF)
+  status         OrganizationMembershipStatus @default(ACTIVE)
+  invitedById    String?
+  invitedAt      DateTime?
+  acceptedAt     DateTime?
+  disabledAt     DateTime?
+  createdAt      DateTime                     @default(now())
+  updatedAt      DateTime                     @updatedAt
 
-  organization     Organization   @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  refreshTokens    RefreshToken[]
-  verifiedPayments Payment[]      @relation("PaymentVerifiedBy")
-  assignedTasks    Task[]         @relation("TaskAssignedTo")
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation("OrganizationMembershipUser", fields: [userId], references: [id], onDelete: Cascade)
+  invitedBy    User?        @relation("OrganizationMembershipInvitedBy", fields: [invitedById], references: [id], onDelete: SetNull)
 
+  @@unique([organizationId, userId])
+  @@index([userId])
   @@index([organizationId])
   @@index([organizationId, role])
+  @@index([organizationId, status])
+}
+
+model OrganizationInvitation {
+  id             String                       @id @default(cuid())
+  organizationId String
+  email          String
+  role           OrganizationRole             @default(STAFF)
+  status         OrganizationInvitationStatus @default(PENDING)
+  tokenHash      String                       @unique
+  invitedById    String?
+  expiresAt      DateTime
+  acceptedAt     DateTime?
+  revokedAt      DateTime?
+  createdAt      DateTime                     @default(now())
+  updatedAt      DateTime                     @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invitedBy    User?        @relation("OrganizationInvitationInvitedBy", fields: [invitedById], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([organizationId, email])
+  @@index([organizationId, status])
+  @@index([expiresAt])
 }
 
 model RefreshToken {

@@ -4,7 +4,11 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { Prisma, UserRole } from '@prisma/client';
+import {
+  OrganizationMembershipStatus,
+  OrganizationRole,
+  Prisma,
+} from '@prisma/client';
 import { compare, hash } from 'bcryptjs';
 import { createHash, randomBytes } from 'crypto';
 import type { StringValue } from 'ms';
@@ -31,7 +35,7 @@ export class AuthService {
     const passwordHash = await hash(dto.password, this.bcryptRounds);
 
     try {
-      const { user, organization } = await this.prisma.$transaction(
+      const { user, organization, membership } = await this.prisma.$transaction(
         async (tx) => {
           const createdOrganization = await tx.organization.create({
             data: {
@@ -42,21 +46,30 @@ export class AuthService {
 
           const createdUser = await tx.user.create({
             data: {
-              organizationId: createdOrganization.id,
               email,
               passwordHash,
-              role: UserRole.OWNER,
+            },
+          });
+
+          const createdMembership = await tx.organizationMembership.create({
+            data: {
+              organizationId: createdOrganization.id,
+              userId: createdUser.id,
+              role: OrganizationRole.OWNER,
+              status: OrganizationMembershipStatus.ACTIVE,
+              acceptedAt: new Date(),
             },
           });
 
           return {
             user: createdUser,
             organization: createdOrganization,
+            membership: createdMembership,
           };
         },
       );
 
-      return this.createSession(user, organization);
+      return this.createSession(user, membership, organization);
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -75,7 +88,13 @@ export class AuthService {
     const email = dto.email.trim().toLowerCase();
     const user = await this.prisma.user.findUnique({
       where: { email },
-      include: { organization: true },
+      include: {
+        organizationMemberships: {
+          where: { status: OrganizationMembershipStatus.ACTIVE },
+          include: { organization: true },
+          orderBy: { createdAt: 'asc' },
+        },
+      },
     });
 
     if (!user) {
@@ -88,7 +107,9 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password');
     }
 
-    return this.createSession(user, user.organization);
+    const membership = this.getDefaultMembership(user.organizationMemberships);
+
+    return this.createSession(user, membership, membership.organization);
   }
 
   async refresh(refreshToken: string | undefined): Promise<AuthSession> {
@@ -101,7 +122,13 @@ export class AuthService {
       where: { tokenHash },
       include: {
         user: {
-          include: { organization: true },
+          include: {
+            organizationMemberships: {
+              where: { status: OrganizationMembershipStatus.ACTIVE },
+              include: { organization: true },
+              orderBy: { createdAt: 'asc' },
+            },
+          },
         },
       },
     });
@@ -119,7 +146,15 @@ export class AuthService {
       data: { revokedAt: new Date() },
     });
 
-    return this.createSession(storedToken.user, storedToken.user.organization);
+    const membership = this.getDefaultMembership(
+      storedToken.user.organizationMemberships,
+    );
+
+    return this.createSession(
+      storedToken.user,
+      membership,
+      membership.organization,
+    );
   }
 
   async logout(refreshToken: string | undefined): Promise<void> {
@@ -140,8 +175,11 @@ export class AuthService {
     user: {
       id: string;
       email: string;
-      role: UserRole;
+    },
+    membership: {
+      id: string;
       organizationId: string;
+      role: OrganizationRole;
     },
     organization: {
       id: string;
@@ -152,8 +190,9 @@ export class AuthService {
     const payload: JwtPayload = {
       sub: user.id,
       email: user.email,
-      role: user.role,
-      organizationId: user.organizationId,
+      role: membership.role,
+      organizationId: membership.organizationId,
+      organizationMembershipId: membership.id,
     };
     const refreshToken = this.createOpaqueToken();
     const tokenHash = this.hashRefreshToken(refreshToken);
@@ -175,7 +214,7 @@ export class AuthService {
       user: {
         id: user.id,
         email: user.email,
-        role: user.role,
+        role: membership.role,
       },
       organization: {
         id: organization.id,
@@ -183,6 +222,29 @@ export class AuthService {
         slug: organization.slug,
       },
     };
+  }
+
+  private getDefaultMembership<
+    T extends {
+      id: string;
+      organizationId: string;
+      role: OrganizationRole;
+      organization: {
+        id: string;
+        name: string;
+        slug: string;
+      };
+    },
+  >(memberships: T[]) {
+    const membership = memberships[0];
+
+    if (!membership) {
+      throw new UnauthorizedException(
+        'No active organization membership found',
+      );
+    }
+
+    return membership;
   }
 
   private async createAvailableSlug(

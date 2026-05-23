@@ -6,6 +6,8 @@ import {
   MembershipStatus,
   MessageDirection,
   MessageStatus,
+  OrganizationMembershipStatus,
+  OrganizationRole,
   PaymentMethod,
   PaymentStatus,
   Prisma,
@@ -13,7 +15,6 @@ import {
   TaskStatus,
   TaskType,
   TimelineEventType,
-  UserRole,
   WorkflowStatus,
   WorkflowStepStatus,
   WorkflowType,
@@ -299,18 +300,32 @@ const clearOrganizationBySlug = async (
   await tx.payment.deleteMany({ where });
   await tx.membership.deleteMany({ where });
   await tx.plan.deleteMany({ where });
+  await tx.organizationInvitation.deleteMany({ where });
 
-  const users = await tx.user.findMany({
+  const memberships = await tx.organizationMembership.findMany({
     where,
     select: { id: true },
   });
-
-  await tx.refreshToken.deleteMany({
-    where: { userId: { in: users.map((user) => user.id) } },
+  const users = await tx.user.findMany({
+    where: {
+      organizationMemberships: {
+        some: { organizationId: organization.id },
+      },
+    },
+    select: { id: true },
   });
-  await tx.user.deleteMany({ where });
+
+  await tx.organizationMembership.deleteMany({
+    where: { id: { in: memberships.map((membership) => membership.id) } },
+  });
   await tx.member.deleteMany({ where });
   await tx.organization.delete({ where: { id: organization.id } });
+  await tx.user.deleteMany({
+    where: {
+      id: { in: users.map((user) => user.id) },
+      organizationMemberships: { none: {} },
+    },
+  });
 };
 
 const clearDemoOrganization = async (tx: Prisma.TransactionClient) => {
@@ -388,10 +403,18 @@ async function main() {
 
     const owner = await tx.user.create({
       data: {
-        organizationId: organization.id,
         email: demoOwnerEmail,
         passwordHash: await hash(demoOwnerPassword, 12),
-        role: UserRole.OWNER,
+      },
+    });
+
+    await tx.organizationMembership.create({
+      data: {
+        organizationId: organization.id,
+        userId: owner.id,
+        role: OrganizationRole.OWNER,
+        status: OrganizationMembershipStatus.ACTIVE,
+        acceptedAt: today,
       },
     });
 
@@ -402,7 +425,11 @@ async function main() {
         amount: '65000.00',
       },
       { name: 'Plus', billingCycle: BillingCycle.MONTHLY, amount: '90000.00' },
-      { name: 'Elite', billingCycle: BillingCycle.MONTHLY, amount: '120000.00' },
+      {
+        name: 'Elite',
+        billingCycle: BillingCycle.MONTHLY,
+        amount: '120000.00',
+      },
     ];
 
     const plans = new Map<string, Awaited<ReturnType<typeof tx.plan.create>>>();

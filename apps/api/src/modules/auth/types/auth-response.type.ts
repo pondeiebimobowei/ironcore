@@ -1,11 +1,11 @@
-import { UserRole } from '@prisma/client';
+import { OrganizationRole } from '@prisma/client';
 
 export type AuthResponse = {
   accessToken: string;
   user: {
     id: string;
     email: string;
-    role: UserRole;
+    role: OrganizationRole;
   };
   organization: {
     id: string;
