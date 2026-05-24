@@ -170,7 +170,7 @@ export function DashboardPage() {
           <h1>Dashboard</h1>
           <p>
             Welcome back, {displayName}. Here&apos;s what&apos;s happening with{" "}
-            {organization?.name ?? "your gym"}.
+            {organization?.name ?? "your org"}.
           </p>
         </div>
         <div className="dashboard-hero-actions">
@@ -213,28 +213,28 @@ export function DashboardPage() {
             <KpiCard
               label="Revenue at Risk"
               value={formatCurrency(summary.revenueAtRisk)}
-              change="18%"
+              context="Current at-risk members"
               tone="danger"
               icon="Shield"
             />
             <KpiCard
               label="Overdue Revenue"
               value={formatCurrency(summary.overdueRevenue)}
-              change="12%"
+              context="Current overdue members"
               tone="warning"
               icon="Clock"
             />
             <KpiCard
               label="Recovered Revenue"
               value={formatCurrency(summary.recoveredRevenue)}
-              change="25%"
+              context={summary.dateRange.label}
               tone="success"
               icon="Cash"
             />
             <KpiCard
               label="Recovery Conversion"
               value={`${summary.recoveryConversionRate}%`}
-              change="6.2%"
+              context="Verified vs open risk"
               tone="accent"
               icon="Trend"
             />
@@ -495,13 +495,13 @@ export function DashboardPage() {
 function KpiCard({
   label,
   value,
-  change,
+  context,
   tone,
   icon,
 }: {
   label: string;
   value: string;
-  change: string;
+  context: string;
   tone: "danger" | "warning" | "success" | "accent";
   icon: string;
 }) {
@@ -510,9 +510,7 @@ function KpiCard({
       <div>
         <span>{label}</span>
         <strong>{value}</strong>
-        <small className={`kpi-change kpi-change-${tone}`}>
-          ↑ {change} vs last 7 days
-        </small>
+        <small className={`kpi-context kpi-context-${tone}`}>{context}</small>
       </div>
       <b className={`kpi-icon kpi-icon-${tone}`}>{icon}</b>
     </article>

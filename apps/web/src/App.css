@@ -4420,13 +4420,13 @@ select[aria-invalid="true"],
   color: #9333ea;
 }
 
-.kpi-change-danger,
-.kpi-change-warning {
+.kpi-context-danger,
+.kpi-context-warning {
   color: #ef4444 !important;
 }
 
-.kpi-change-success,
-.kpi-change-accent {
+.kpi-context-success,
+.kpi-context-accent {
   color: #059669 !important;
 }
 

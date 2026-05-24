@@ -75,6 +75,17 @@ type MemberWithLatestMembership = {
   memberships: Array<{ amount: { toString(): string } }>;
 };
 
+type RevenueTrendMembership = {
+  expiryDate: Date;
+  amount: { toString(): string };
+};
+
+type RecoveredPayment = {
+  amountExpected: { toString(): string };
+  amountPaid: { toString(): string } | null;
+  verifiedAt: Date | null;
+};
+
 const statusLabels: Record<MemberStatus, string> = {
   [MemberStatus.ACTIVE]: 'Active',
   [MemberStatus.EXPIRING]: 'Expiring Soon',
@@ -113,6 +124,7 @@ export class DashboardService {
       expiringMembersCount,
       overdueMembersCount,
       recoveredPayments,
+      trendRiskMemberships,
       reactivatedWorkflows,
       openTasksCount,
       totalMembersCount,
@@ -143,10 +155,33 @@ export class DashboardService {
         where: {
           organizationId,
           status: PaymentStatus.VERIFIED,
+          verifiedAt: {
+            gte: startDate,
+            lte: this.endOfDay(endDate),
+          },
         },
         select: {
           amountExpected: true,
           amountPaid: true,
+          verifiedAt: true,
+        },
+      }),
+      this.prisma.membership.findMany({
+        where: {
+          organizationId,
+          member: {
+            deletedAt: null,
+            status: {
+              in: [MemberStatus.OVERDUE, MemberStatus.AT_RISK],
+            },
+          },
+          expiryDate: {
+            lte: endDate,
+          },
+        },
+        select: {
+          amount: true,
+          expiryDate: true,
         },
       }),
       this.prisma.workflow.findMany({
@@ -234,11 +269,7 @@ export class DashboardService {
 
     const revenueAtRisk = this.sumLatestMembershipAmounts(atRiskMembers);
     const overdueRevenue = this.sumLatestMembershipAmounts(overdueMembers);
-    const recoveredRevenue = recoveredPayments.reduce(
-      (total, payment) =>
-        total + Number(payment.amountPaid ?? payment.amountExpected),
-      0,
-    );
+    const recoveredRevenue = this.sumRecoveredPayments(recoveredPayments);
 
     return {
       revenueAtRisk,
@@ -262,8 +293,8 @@ export class DashboardService {
       },
       revenueTrend: this.buildRevenueTrend(
         startDate,
-        revenueAtRisk + overdueRevenue,
-        recoveredRevenue,
+        trendRiskMemberships,
+        recoveredPayments,
       ),
       topRevenueRisks: topRiskMembers
         .map((member) => {
@@ -370,6 +401,12 @@ export class DashboardService {
     return next;
   }
 
+  private endOfDay(date: Date) {
+    const next = new Date(date);
+    next.setHours(23, 59, 59, 999);
+    return next;
+  }
+
   private daysBetween(first: Date, second: Date) {
     const firstDay = this.startOfDay(first);
     const secondDay = this.startOfDay(second);
@@ -390,21 +427,60 @@ export class DashboardService {
 
   private buildRevenueTrend(
     startDate: Date,
-    atRisk: number,
-    recovered: number,
+    riskMemberships: RevenueTrendMembership[],
+    recoveredPayments: RecoveredPayment[],
   ) {
-    const atRiskMultipliers = [0.88, 0.82, 0.72, 0.76, 0.73, 0.84, 0.94];
-    const recoveredMultipliers = [0.52, 0.56, 0.72, 0.7, 0.68, 0.78, 0.86];
-
-    return atRiskMultipliers.map((multiplier, index) => {
+    return Array.from({ length: 7 }, (_, index) => {
       const date = this.addDays(startDate, index);
+      const dayStart = this.startOfDay(date);
+      const dayEnd = this.endOfDay(date);
 
       return {
         label: this.formatMonthDay(date),
-        atRisk: Math.round(atRisk * multiplier),
-        recovered: Math.round(recovered * recoveredMultipliers[index]),
+        atRisk: this.sumMembershipsExpiredBy(riskMemberships, dayEnd),
+        recovered: this.sumRecoveredPaymentsForDay(
+          recoveredPayments,
+          dayStart,
+          dayEnd,
+        ),
       };
     });
+  }
+
+  private sumMembershipsExpiredBy(
+    memberships: RevenueTrendMembership[],
+    date: Date,
+  ) {
+    return memberships.reduce((total, membership) => {
+      if (membership.expiryDate > date) {
+        return total;
+      }
+
+      return total + Number(membership.amount);
+    }, 0);
+  }
+
+  private sumRecoveredPayments(payments: RecoveredPayment[]) {
+    return payments.reduce(
+      (total, payment) =>
+        total + Number(payment.amountPaid ?? payment.amountExpected),
+      0,
+    );
+  }
+
+  private sumRecoveredPaymentsForDay(
+    payments: RecoveredPayment[],
+    startDate: Date,
+    endDate: Date,
+  ) {
+    return this.sumRecoveredPayments(
+      payments.filter(
+        (payment) =>
+          payment.verifiedAt !== null &&
+          payment.verifiedAt >= startDate &&
+          payment.verifiedAt <= endDate,
+      ),
+    );
   }
 
   private buildStatusBreakdown(

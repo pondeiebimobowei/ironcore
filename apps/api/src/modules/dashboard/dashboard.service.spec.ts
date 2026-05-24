@@ -26,6 +26,9 @@ function createService() {
       findMany: jest.fn().mockResolvedValue([]),
       count: jest.fn().mockResolvedValue(0),
     },
+    membership: {
+      findMany: jest.fn().mockResolvedValue([]),
+    },
     workflow: {
       findMany: jest.fn().mockResolvedValue([]),
     },
@@ -42,6 +45,7 @@ function createService() {
     service: new DashboardService(prisma),
     prisma: prisma as unknown as {
       payment: { count: jest.Mock; findMany: jest.Mock };
+      membership: { findMany: jest.Mock };
       task: { count: jest.Mock; findMany: jest.Mock };
     },
   };
@@ -140,5 +144,57 @@ describe('DashboardService', () => {
         alerts: 1,
       },
     });
+  });
+
+  it('builds dashboard recovery values from verified payments inside the visible date range', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-05-24T12:00:00.000Z'));
+    const { service, prisma } = createService();
+    prisma.payment.findMany.mockResolvedValue([
+      {
+        amountExpected: { toString: () => '12000' },
+        amountPaid: { toString: () => '10000' },
+        verifiedAt: new Date('2026-05-20T10:00:00.000Z'),
+      },
+    ]);
+    prisma.membership.findMany.mockResolvedValue([
+      {
+        amount: { toString: () => '15000' },
+        expiryDate: new Date('2026-05-19T00:00:00.000Z'),
+      },
+      {
+        amount: { toString: () => '8000' },
+        expiryDate: new Date('2026-05-24T00:00:00.000Z'),
+      },
+    ]);
+
+    await expect(service.summary('org-1')).resolves.toMatchObject({
+      recoveredRevenue: 10000,
+      revenueTrend: [
+        { label: 'May 18', atRisk: 0, recovered: 0 },
+        { label: 'May 19', atRisk: 15000, recovered: 0 },
+        { label: 'May 20', atRisk: 15000, recovered: 10000 },
+        { label: 'May 21', atRisk: 15000, recovered: 0 },
+        { label: 'May 22', atRisk: 15000, recovered: 0 },
+        { label: 'May 23', atRisk: 15000, recovered: 0 },
+        { label: 'May 24', atRisk: 23000, recovered: 0 },
+      ],
+    });
+    expect(prisma.payment.findMany).toHaveBeenCalledWith({
+      where: {
+        organizationId: 'org-1',
+        status: PaymentStatus.VERIFIED,
+        verifiedAt: {
+          gte: new Date('2026-05-18T00:00:00.000+01:00'),
+          lte: new Date('2026-05-24T23:59:59.999+01:00'),
+        },
+      },
+      select: {
+        amountExpected: true,
+        amountPaid: true,
+        verifiedAt: true,
+      },
+    });
+
+    jest.useRealTimers();
   });
 });
