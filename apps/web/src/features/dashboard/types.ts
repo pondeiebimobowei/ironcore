@@ -56,4 +56,10 @@ export type DashboardSummary = {
       nextAction: string;
     }>;
   };
+  navigationBadges: {
+    recovery: number;
+    payments: number;
+    tasks: number;
+    alerts: number;
+  };
 };

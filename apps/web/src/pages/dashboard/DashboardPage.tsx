@@ -29,6 +29,12 @@ const emptySummary: DashboardSummary = {
     },
     items: [],
   },
+  navigationBadges: {
+    recovery: 0,
+    payments: 0,
+    tasks: 0,
+    alerts: 0,
+  },
 };
 
 const statusPalette: Record<string, string> = {

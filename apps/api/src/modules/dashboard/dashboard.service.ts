@@ -63,6 +63,12 @@ type DashboardSummary = {
       nextAction: string;
     }>;
   };
+  navigationBadges: {
+    recovery: number;
+    payments: number;
+    tasks: number;
+    alerts: number;
+  };
 };
 
 type MemberWithLatestMembership = {
@@ -86,6 +92,13 @@ const taskBucketByType: Record<TaskType, string> = {
   [TaskType.REACTIVATION]: 'reactivation',
 };
 
+const recoveryTaskTypes = [
+  TaskType.FOLLOW_UP_MEMBER,
+  TaskType.RESOLVE_OVERDUE_STATUS,
+  TaskType.REVIEW_AT_RISK_MEMBER,
+  TaskType.REACTIVATION,
+];
+
 @Injectable()
 export class DashboardService {
   constructor(private readonly prisma: PrismaService) {}
@@ -107,6 +120,8 @@ export class DashboardService {
       recentEvents,
       statusGroups,
       queueTasks,
+      recoveryTasksCount,
+      pendingPaymentVerificationCount,
     ] = await Promise.all([
       this.membersWithLatestMembership(organizationId, [MemberStatus.AT_RISK]),
       this.membersWithLatestMembership(organizationId, [MemberStatus.OVERDUE]),
@@ -202,6 +217,19 @@ export class DashboardService {
           },
         },
       }),
+      this.prisma.task.count({
+        where: {
+          organizationId,
+          type: { in: recoveryTaskTypes },
+          status: { in: [TaskStatus.OPEN, TaskStatus.IN_PROGRESS] },
+        },
+      }),
+      this.prisma.payment.count({
+        where: {
+          organizationId,
+          status: PaymentStatus.PENDING_VERIFICATION,
+        },
+      }),
     ]);
 
     const revenueAtRisk = this.sumLatestMembershipAmounts(atRiskMembers);
@@ -285,6 +313,12 @@ export class DashboardService {
             nextAction: this.nextAction(task.type),
           };
         }),
+      },
+      navigationBadges: {
+        recovery: recoveryTasksCount,
+        payments: pendingPaymentVerificationCount,
+        tasks: openTasksCount,
+        alerts: openTasksCount,
       },
     };
   }

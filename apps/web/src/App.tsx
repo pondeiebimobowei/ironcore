@@ -1,21 +1,68 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
+import { getDashboardSummary } from "./features/dashboard/api";
+import type { DashboardSummary } from "./features/dashboard/types";
 import { useAuth } from "./lib/auth/AuthContext";
 import "./App.css";
 
 const navigationItems = [
   { to: "/", label: "Dashboard", icon: "D" },
   { to: "/members", label: "Members", icon: "M" },
-  { to: "/recovery", label: "Recovery Queue", icon: "R", badge: "12" },
-  { to: "/payments", label: "Payments", icon: "P", badge: "7" },
+  {
+    to: "/recovery",
+    label: "Recovery Queue",
+    icon: "R",
+    badgeKey: "recovery",
+  },
+  { to: "/payments", label: "Payments", icon: "P", badgeKey: "payments" },
   { to: "/workflows", label: "Workflows", icon: "W" },
-  { to: "/tasks", label: "Tasks", icon: "T" },
+  { to: "/tasks", label: "Tasks", icon: "T", badgeKey: "tasks" },
   { to: "/settings", label: "Settings", icon: "S" },
-];
+] satisfies Array<{
+  to: string;
+  label: string;
+  icon: string;
+  badgeKey?: keyof DashboardSummary["navigationBadges"];
+}>;
+
+function formatBadgeCount(count?: number) {
+  if (!count || count < 1) {
+    return null;
+  }
+
+  return count > 99 ? "99+" : String(count);
+}
 
 export function AppLayout() {
   const auth = useAuth();
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const [navigationBadges, setNavigationBadges] = useState<
+    DashboardSummary["navigationBadges"] | null
+  >(null);
+
+  useEffect(() => {
+    if (!auth.isAuthenticated || auth.onboardingRequired) {
+      return;
+    }
+
+    let active = true;
+
+    getDashboardSummary()
+      .then((summary) => {
+        if (active) {
+          setNavigationBadges(summary.navigationBadges);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setNavigationBadges(null);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [auth.isAuthenticated, auth.onboardingRequired]);
 
   if (!auth.isAuthenticated || auth.onboardingRequired) {
     return (
@@ -33,6 +80,7 @@ export function AppLayout() {
       .join("")
       .slice(0, 2)
       .toUpperCase() || "IC";
+  const alertBadge = formatBadgeCount(navigationBadges?.alerts);
 
   return (
     <div className={`app-shell ${isMobileNavOpen ? "nav-open" : ""}`}>
@@ -49,20 +97,26 @@ export function AppLayout() {
           id="primary-navigation"
           aria-label="Primary navigation"
         >
-          {navigationItems.map((item) => (
-            <NavLink
-              to={item.to}
-              key={item.to}
-              end={item.to === "/"}
-              onClick={() => setIsMobileNavOpen(false)}
-            >
-              <span className="nav-icon" aria-hidden="true">
-                {item.icon}
-              </span>
-              <span>{item.label}</span>
-              {item.badge ? <strong>{item.badge}</strong> : null}
-            </NavLink>
-          ))}
+          {navigationItems.map((item) => {
+            const badge = item.badgeKey
+              ? formatBadgeCount(navigationBadges?.[item.badgeKey])
+              : null;
+
+            return (
+              <NavLink
+                to={item.to}
+                key={item.to}
+                end={item.to === "/"}
+                onClick={() => setIsMobileNavOpen(false)}
+              >
+                <span className="nav-icon" aria-hidden="true">
+                  {item.icon}
+                </span>
+                <span>{item.label}</span>
+                {badge ? <strong>{badge}</strong> : null}
+              </NavLink>
+            );
+          })}
         </nav>
         <div className="plan-card">
           <span>Your Plan</span>
@@ -95,7 +149,8 @@ export function AppLayout() {
           </label>
           <div className="topbar-actions">
             <button className="icon-button" type="button" aria-label="Alerts">
-              !<span>7</span>
+              !
+              {alertBadge ? <span>{alertBadge}</span> : null}
             </button>
             <div className="user-menu">
               <span>{initials}</span>
