@@ -89,7 +89,6 @@ export function AppLayout() {
           <span className="brand-mark">IC</span>
           <span>
             <strong>IronCore</strong>
-            <small>Retain</small>
           </span>
         </NavLink>
         <nav

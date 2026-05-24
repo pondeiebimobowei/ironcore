@@ -20,7 +20,7 @@ export function captureEvent(
       event,
       distinct_id: distinctId,
       properties: {
-        app: "ironcore-retain",
+        app: "ironcore",
         ...properties,
       },
     }),

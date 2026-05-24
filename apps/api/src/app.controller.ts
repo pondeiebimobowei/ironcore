@@ -14,7 +14,7 @@ export class AppController {
   getHealth() {
     return {
       status: 'ok',
-      service: 'ironcore-retain-api',
+      service: 'ironcore-api',
     };
   }
 }

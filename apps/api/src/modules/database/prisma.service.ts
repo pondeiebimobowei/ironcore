@@ -4,7 +4,7 @@ import { PrismaClient } from '@prisma/client';
 
 const connectionString =
   process.env.DATABASE_URL ??
-  'postgresql://ironcore:ironcore@localhost:5432/ironcore_retain';
+  'postgresql://ironcore:ironcore@localhost:5432/ironcore';
 
 @Injectable()
 export class PrismaService

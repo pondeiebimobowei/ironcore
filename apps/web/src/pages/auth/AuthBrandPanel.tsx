@@ -2,12 +2,11 @@ import { Link } from "react-router-dom";
 
 export function AuthBrandPanel() {
   return (
-    <section className="auth-brand-panel" aria-label="IronCore Retain">
+    <section className="auth-brand-panel" aria-label="IronCore">
       <Link to="/login" className="auth-brand">
         <span className="auth-brand-mark">IC</span>
         <span>
           <strong>IronCore</strong>
-          <small>Retain</small>
         </span>
       </Link>
 

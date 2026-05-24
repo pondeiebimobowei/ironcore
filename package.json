@@ -1,5 +1,5 @@
 {
-  "name": "ironcore-retain",
+  "name": "ironcore",
   "private": true,
   "scripts": {
     "build": "turbo run build",

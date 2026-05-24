@@ -37,7 +37,7 @@ const sideCards = [
   },
   {
     title: "Integrations",
-    description: "Connect IronCore Retain with your favorite tools.",
+    description: "Connect IronCore with your favorite tools.",
     action: "Manage Integrations",
     path: "/settings/integrations",
     icon: "IN",

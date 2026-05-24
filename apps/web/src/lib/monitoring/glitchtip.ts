@@ -54,7 +54,7 @@ export function captureGlitchTipException(
     platform: "javascript",
     environment,
     level: context.level ?? "error",
-    logger: "ironcore-retain-web",
+    logger: "ironcore-web",
     request: {
       url: window.location.href,
     },

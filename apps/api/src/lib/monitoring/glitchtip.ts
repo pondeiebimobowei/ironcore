@@ -33,7 +33,7 @@ export class GlitchTipReporter {
       platform: 'node',
       environment: this.environment,
       level: context.level ?? 'error',
-      logger: 'ironcore-retain-api',
+      logger: 'ironcore-api',
       exception: {
         values: [
           {

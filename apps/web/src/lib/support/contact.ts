@@ -1,4 +1,4 @@
-const fallbackSupportEmail = "support@ironcore-retain.local";
+const fallbackSupportEmail = "support@ironcore.local";
 
 export const supportEmail =
   import.meta.env.VITE_SUPPORT_EMAIL ?? fallbackSupportEmail;
