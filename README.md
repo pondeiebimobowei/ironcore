@@ -6,6 +6,8 @@ IronCore Retain helps gyms, wellness studios, and recurring-service SMBs detect 
 
 This repository is intentionally scoped to the MVP foundation. It should not grow into gym management, scheduling, attendance tracking, POS, workout planning, or AI assistant software.
 
+The product direction is B2B SaaS: each customer operates inside an organization-scoped workspace, and public product positioning should speak to business owners and operators rather than consumers.
+
 ## Current State
 
 The MVP recovery loop is implemented:
@@ -20,6 +22,8 @@ The MVP recovery loop is implemented:
 - settings, organization profile editing, and billing placeholder screens
 - GlitchTip-compatible error monitoring hooks
 - lightweight PostHog event capture
+
+The next public web surface is a SaaS-style landing page for unauthenticated visitors. It should own `/`, explain the recovery loop, and route visitors to `/signup` or `/login`; the authenticated dashboard should move to `/dashboard` during that route migration.
 
 The app is still intentionally scoped to the recovery MVP. It is not a gym management system.
 
@@ -205,13 +209,14 @@ The MVP follows the accepted decisions in `doc/architecture-decision-records.md`
 
 ## MVP Flows
 
-1. Sign up or log in.
-2. Import members or create a member manually.
-3. Run the member state job from the protected admin debug endpoint when needed.
-4. Review dashboard revenue risk and open tasks.
-5. Create or review pending payments, then approve or reject payment proof.
-6. Use the recovery queue to complete operational follow-up tasks.
-7. Review member timelines to confirm audit events.
+1. Visit the public SaaS landing page, then sign up or log in.
+2. Complete organization setup to create the tenant workspace.
+3. Import members or create a member manually.
+4. Run the member state job from the protected admin debug endpoint when needed.
+5. Review dashboard revenue risk and open tasks.
+6. Create or review pending payments, then approve or reject payment proof.
+7. Use the recovery queue to complete operational follow-up tasks.
+8. Review member timelines to confirm audit events.
 
 Admin debug endpoints:
 
@@ -226,6 +231,7 @@ Both require an authenticated owner account.
 
 - WhatsApp is mocked; no real WhatsApp Business API messages are sent.
 - Billing is a placeholder and does not connect to a payment processor.
+- The public SaaS landing page is documented as the next web route split; the current app may still serve the protected dashboard at `/` until `/dashboard` migration is implemented.
 - Workflow definitions are persisted for list/detail screens and the fixed create wizard; arbitrary branching, drag-and-drop automation, and automatic execution generation from custom definitions remain out of scope.
 - Organization profile persistence covers core business, contact, address, business-hour, logo URL, and image URL fields.
 - Image and logo upload mechanics are placeholders; URLs can be stored, but file storage is not enabled yet.

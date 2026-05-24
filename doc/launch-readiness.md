@@ -18,16 +18,19 @@ npm run build
 
 Then exercise the core path manually:
 
-1. Sign up as a new owner.
-2. Import the member CSV template with valid, invalid, and duplicate rows.
-3. Run `POST /api/admin/jobs/update-member-states`.
-4. Confirm the dashboard shows at-risk, overdue, and recovered revenue.
-5. Record a transfer payment.
-6. Approve and reject pending payments.
-7. Run `POST /api/admin/workflows/run`.
-8. Confirm message logs, recovery tasks, and timeline events update.
-9. Complete a recovery task.
-10. Open dashboard, members, payments, workflows, recovery, tasks, and settings at desktop and mobile widths.
+1. Open `/` while signed out and confirm the public SaaS landing page loads.
+2. Confirm landing-page CTAs route to `/signup` and `/login`.
+3. Sign up as a new owner.
+4. Complete organization setup and confirm the protected dashboard loads at `/dashboard`.
+5. Import the member CSV template with valid, invalid, and duplicate rows.
+6. Run `POST /api/admin/jobs/update-member-states`.
+7. Confirm the dashboard shows at-risk, overdue, and recovered revenue.
+8. Record a transfer payment.
+9. Approve and reject pending payments.
+10. Run `POST /api/admin/workflows/run`.
+11. Confirm message logs, recovery tasks, and timeline events update.
+12. Complete a recovery task.
+13. Open dashboard, members, payments, workflows, recovery, tasks, and settings at desktop and mobile widths.
 
 ## Production Readiness
 

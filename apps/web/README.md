@@ -4,6 +4,8 @@ Vite + React SPA for the IronCore Retain MVP.
 
 The web app exposes the recovery-focused operator experience: signup, organization setup, dashboard metrics, member management, recovery queue, payment verification, workflow review, task management, and settings.
 
+The planned public web surface is a B2B SaaS landing page at `/`. Once that route is implemented, the protected product dashboard should live at `/dashboard` and all operator routes should remain behind `ProtectedRoute`.
+
 ## Local Development
 
 From the repository root:
@@ -34,11 +36,20 @@ npm run preview --workspace=apps/web
 
 ## Routes
 
+Planned public routes:
+
 ```txt
+/
 /login
 /signup
+/forgot-password
+```
+
+Protected product routes:
+
+```txt
 /onboarding/company
-/
+/dashboard
 /members
 /members/:memberId
 /payments
@@ -59,7 +70,7 @@ npm run preview --workspace=apps/web
 /settings/audit-log
 ```
 
-All product routes are protected by `ProtectedRoute`.
+Until the landing-page route migration is implemented, the current router may still serve the dashboard at `/`. The documentation target is public `/` for SaaS positioning and protected `/dashboard` for the app.
 
 ## Frontend Structure
 

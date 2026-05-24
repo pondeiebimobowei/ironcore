@@ -130,6 +130,7 @@ ironcore-retain/
     web/                         # Vite + React SPA
       src/
         pages/
+          landing/              # Public B2B SaaS landing page
           auth/
             login/
             signup/
@@ -1227,12 +1228,66 @@ recoveryConversionRate
 
 # 5. Frontend Build Plan
 
+## Area 0: Public B2B SaaS Landing Page
+
+### Page
+
+```txt
+/
+src/pages/landing/LandingPage.tsx
+```
+
+### Purpose
+
+Introduce IronCore Retain as a B2B SaaS product for membership businesses before authentication. The page should explain the revenue recovery loop, qualify the target customer, and route owners or operators into signup or login.
+
+### Required Positioning
+
+- lead with recurring revenue recovery for membership businesses
+- make gyms and fitness studios the first vertical, not the only vertical
+- communicate tenant/workspace setup as part of onboarding
+- show the MVP loop: detect leakage -> recover overdue revenue -> verify payment -> prove recovered revenue
+- use business-owner language, not consumer fitness language
+
+### Sections
+
+```txt
+Hero
+Revenue recovery loop
+Target businesses
+Workflow preview
+Proof/value metrics
+Pilot CTA
+Login/signup CTA
+```
+
+### Routing Rule
+
+The public landing page owns `/`. The authenticated product dashboard should live at `/dashboard`. Product routes remain protected by `ProtectedRoute`; the landing page, login, signup, and forgot-password routes remain public.
+
+### MVP Boundaries
+
+- no payment processor checkout
+- no public pricing engine
+- no self-serve subscription management
+- no non-MVP feature promises such as AI churn prediction, attendance, scheduling, or embedded finance
+
+### Acceptance Criteria
+
+- unauthenticated users can visit `/`
+- authenticated users can open `/dashboard`
+- landing page CTAs route to `/signup` and `/login`
+- messaging stays focused on the documented recovery MVP
+- page is responsive and does not block the recovery workflow
+
+---
+
 ## Area 1: App Shell
 
 ### Pages (src/pages/)
 
 ```txt
-src/pages/dashboard/DashboardPage.tsx
+src/pages/dashboard/DashboardPage.tsx       # /dashboard after landing-page route migration
 src/pages/members/MembersPage.tsx
 src/pages/recovery/RecoveryQueuePage.tsx
 src/pages/payments/PaymentsPage.tsx
@@ -1259,6 +1314,7 @@ ConfirmDialog
 - layout works across desktop/tablet/mobile
 - nav links route correctly
 - protected routes redirect unauthenticated users
+- public landing/auth routes do not require an organization session
 
 ---
 
@@ -1543,6 +1599,20 @@ Billing is managed manually during the MVP pilot.
 ---
 
 # 6. Core User Flows
+
+## Flow 0: Public Landing to Signup
+
+1. visitor opens `/`
+2. visitor sees B2B SaaS positioning for recurring revenue recovery
+3. visitor chooses signup or login
+4. signup creates an account-only user
+5. organization setup creates the tenant workspace and owner membership
+6. authenticated user lands on `/dashboard`
+
+Rules:
+- landing content must support the MVP recovery loop
+- landing content must not promise excluded gym-management or payment-processor features
+- tenant setup remains part of onboarding, not a public marketing form
 
 ## Flow 1: Authentication
 
@@ -2507,6 +2577,7 @@ Prepare the MVP for pilot use.
 - build settings pages
 - add organization profile editing
 - add billing placeholder
+- add public B2B SaaS landing page and route split
 - add responsive cleanup
 - add empty/error states
 - add analytics events
@@ -2517,6 +2588,8 @@ Prepare the MVP for pilot use.
 
 ```txt
 apps/web/src/pages/settings/
+apps/web/src/pages/landing/
+apps/web/src/router/
 apps/web/src/features/organizations/
 apps/web/src/lib/posthog/
 README.md
@@ -2530,6 +2603,7 @@ Phase 9 complete.
 ### Completion Criteria
 
 - all core flows usable
+- `/` can serve public SaaS positioning while `/dashboard` serves the protected app
 - app is pilot-ready
 - docs updated
 - errors monitored
@@ -2538,12 +2612,14 @@ Phase 9 complete.
 
 - run full manual QA
 - run E2E critical path
+- verify `/` is public and `/dashboard` is protected after landing-page implementation
 - deploy to staging
 - smoke test production
 
 ### Risks
 
 - polishing non-core UI
+- turning the landing page into a broad marketing site before the recovery MVP is proven
 - delaying pilot for unnecessary refinements
 
 ---
@@ -2569,6 +2645,7 @@ Phase 9 complete.
 - [x] Timeline events
 - [x] Settings
 - [x] Billing placeholder
+- [ ] Public B2B SaaS landing page
 
 ---
 
@@ -2640,6 +2717,7 @@ Phase 9 complete.
 - [x] README complete
 - [x] Support/contact path available
 - [x] Pilot feedback capture process ready
+- [ ] Public landing page CTA path verified
 
 ---
 
