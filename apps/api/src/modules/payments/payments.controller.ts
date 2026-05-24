@@ -8,6 +8,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { requireOrganizationId } from '../auth/require-organization-id';
 import type { AuthenticatedRequest } from '../auth/types/authenticated-request.type';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { RejectPaymentDto } from './dto/reject-payment.dto';
@@ -59,6 +60,6 @@ export class PaymentsController {
   }
 
   private organizationId(req: AuthenticatedRequest) {
-    return req.user!.organizationId;
+    return requireOrganizationId(req);
   }
 }

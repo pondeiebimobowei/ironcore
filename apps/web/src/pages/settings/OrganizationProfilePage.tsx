@@ -15,7 +15,28 @@ const tabs = [
   "Social & Links",
 ];
 
-const gymImages = ["Training floor", "Street view", "Reception"];
+type BusinessHour = {
+  label: string;
+  opensAt: string;
+  closesAt: string;
+  isOpen: boolean;
+};
+
+const defaultBusinessHours: BusinessHour[] = [
+  {
+    label: "Monday - Friday",
+    opensAt: "05:00 AM",
+    closesAt: "10:00 PM",
+    isOpen: true,
+  },
+  {
+    label: "Saturday",
+    opensAt: "07:00 AM",
+    closesAt: "10:00 PM",
+    isOpen: true,
+  },
+  { label: "Sunday", opensAt: "07:00 AM", closesAt: "05:00 PM", isOpen: true },
+];
 
 export function OrganizationProfilePage() {
   const { organization, updateOrganization } = useAuth();
@@ -23,9 +44,24 @@ export function OrganizationProfilePage() {
     organization?.name ?? "",
   );
   const [tagline, setTagline] = useState("Stronger Every Day");
-  const [description, setDescription] = useState(
-    "A focused fitness facility helping members recover momentum, renew on time, and stay consistent.",
-  );
+  const [description, setDescription] = useState("");
+  const [establishedYear, setEstablishedYear] = useState("");
+  const [businessType, setBusinessType] = useState("");
+  const [organizationSize, setOrganizationSize] = useState("");
+  const [websiteUrl, setWebsiteUrl] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
+  const [primaryPhone, setPrimaryPhone] = useState("");
+  const [secondaryPhone, setSecondaryPhone] = useState("");
+  const [addressLine, setAddressLine] = useState("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
+  const [postalCode, setPostalCode] = useState("");
+  const [country, setCountry] = useState("Nigeria");
+  const [businessHours, setBusinessHours] =
+    useState<BusinessHour[]>(defaultBusinessHours);
+  const [closedOnPublicHolidays, setClosedOnPublicHolidays] = useState(false);
+  const [logoUrl, setLogoUrl] = useState("");
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState("");
@@ -38,6 +74,31 @@ export function OrganizationProfilePage() {
       .then((organization) => {
         if (active) {
           setOrganizationName(organization.name);
+          setTagline(organization.tagline ?? "");
+          setDescription(organization.description ?? "");
+          setEstablishedYear(
+            organization.establishedYear
+              ? String(organization.establishedYear)
+              : "",
+          );
+          setBusinessType(organization.businessType ?? "");
+          setOrganizationSize(organization.organizationSize ?? "");
+          setWebsiteUrl(organization.websiteUrl ?? "");
+          setContactEmail(organization.contactEmail ?? "");
+          setPrimaryPhone(organization.primaryPhone ?? "");
+          setSecondaryPhone(organization.secondaryPhone ?? "");
+          setAddressLine(organization.addressLine ?? "");
+          setCity(organization.city ?? "");
+          setState(organization.state ?? "");
+          setPostalCode(organization.postalCode ?? "");
+          setCountry(organization.country ?? "Nigeria");
+          setBusinessHours(
+            parseBusinessHours(organization.businessHours) ??
+              defaultBusinessHours,
+          );
+          setClosedOnPublicHolidays(organization.closedOnPublicHolidays);
+          setLogoUrl(organization.logoUrl ?? "");
+          setImageUrls(organization.imageUrls);
           updateOrganization({
             id: organization.id,
             name: organization.name,
@@ -78,6 +139,24 @@ export function OrganizationProfilePage() {
       setError("");
       const organization = await updateOrganizationProfile({
         name: organizationName.trim(),
+        tagline: emptyToUndefined(tagline),
+        description: emptyToUndefined(description),
+        establishedYear: establishedYear ? Number(establishedYear) : undefined,
+        businessType: emptyToUndefined(businessType),
+        organizationSize: emptyToUndefined(organizationSize),
+        websiteUrl: emptyToUndefined(websiteUrl),
+        contactEmail: emptyToUndefined(contactEmail),
+        primaryPhone: emptyToUndefined(primaryPhone),
+        secondaryPhone: emptyToUndefined(secondaryPhone),
+        addressLine: emptyToUndefined(addressLine),
+        city: emptyToUndefined(city),
+        state: emptyToUndefined(state),
+        postalCode: emptyToUndefined(postalCode),
+        country: emptyToUndefined(country),
+        businessHours,
+        closedOnPublicHolidays,
+        logoUrl: emptyToUndefined(logoUrl),
+        imageUrls,
       });
       updateOrganization({
         id: organization.id,
@@ -138,7 +217,7 @@ export function OrganizationProfilePage() {
               <span>
                 {error
                   ? "Review the profile fields and try again."
-                  : "Your workspace name has been updated across the app."}
+                  : "Your workspace profile has been updated across the app."}
               </span>
             </section>
           )}
@@ -160,11 +239,22 @@ export function OrganizationProfilePage() {
                   <button type="button" className="secondary-button">
                     Change Logo
                   </button>
-                  <button type="button" className="secondary-button danger-text">
+                  <button
+                    type="button"
+                    className="secondary-button danger-text"
+                  >
                     Remove
                   </button>
                 </div>
               </div>
+              <label>
+                Logo URL
+                <input
+                  value={logoUrl}
+                  onChange={(event) => setLogoUrl(event.target.value)}
+                  placeholder="https://example.com/logo.png"
+                />
+              </label>
               <p className="settings-help">
                 Recommended size: 500x500px. File types: JPG, PNG, SVG.
               </p>
@@ -204,33 +294,71 @@ export function OrganizationProfilePage() {
                 </label>
                 <label>
                   Established Year
-                  <input defaultValue="2021" inputMode="numeric" />
+                  <input
+                    value={establishedYear}
+                    onChange={(event) => setEstablishedYear(event.target.value)}
+                    inputMode="numeric"
+                    placeholder="2021"
+                  />
                 </label>
                 <label>
                   Gym Type
-                  <select defaultValue="Personal Training Gym">
+                  <select
+                    value={businessType}
+                    onChange={(event) => setBusinessType(event.target.value)}
+                  >
+                    <option value="">Select gym type</option>
                     <option>Personal Training Gym</option>
                     <option>Fitness Studio</option>
                     <option>Commercial Gym</option>
                   </select>
                 </label>
                 <label>
+                  Organisation Size
+                  <select
+                    value={organizationSize}
+                    onChange={(event) =>
+                      setOrganizationSize(event.target.value)
+                    }
+                  >
+                    <option value="">Select organisation size</option>
+                    <option value="1-5">1-5 team members</option>
+                    <option value="6-20">6-20 team members</option>
+                    <option value="21+">21+ team members</option>
+                  </select>
+                </label>
+                <label>
                   Website
                   <input
-                    defaultValue={`https://${organization?.slug ?? "gym"}.com`}
+                    value={websiteUrl}
+                    onChange={(event) => setWebsiteUrl(event.target.value)}
+                    placeholder={`https://${organization?.slug ?? "gym"}.com`}
                   />
                 </label>
                 <label>
                   Email
-                  <input defaultValue="info@example.com" type="email" />
+                  <input
+                    value={contactEmail}
+                    onChange={(event) => setContactEmail(event.target.value)}
+                    placeholder="info@example.com"
+                    type="email"
+                  />
                 </label>
                 <label>
                   Phone
-                  <input defaultValue="+234 801 234 5678" />
+                  <input
+                    value={primaryPhone}
+                    onChange={(event) => setPrimaryPhone(event.target.value)}
+                    placeholder="+234 801 234 5678"
+                  />
                 </label>
                 <label>
                   Secondary Phone (Optional)
-                  <input defaultValue="+234 809 876 5432" />
+                  <input
+                    value={secondaryPhone}
+                    onChange={(event) => setSecondaryPhone(event.target.value)}
+                    placeholder="+234 809 876 5432"
+                  />
                 </label>
               </div>
             </section>
@@ -243,7 +371,12 @@ export function OrganizationProfilePage() {
                 </p>
               </header>
               <div className="gym-image-list">
-                {gymImages.map((image) => (
+                {imageUrls.length === 0 ? (
+                  <div className="gym-image-thumb">
+                    <span>No images yet</span>
+                  </div>
+                ) : null}
+                {imageUrls.map((image) => (
                   <div className="gym-image-thumb" key={image}>
                     <span>{image}</span>
                   </div>
@@ -253,8 +386,24 @@ export function OrganizationProfilePage() {
                 </button>
               </div>
               <p className="settings-help">
-                You can upload up to 6 images. JPG, PNG. 3 / 6 images.
+                You can upload up to 6 images. JPG, PNG. {imageUrls.length} / 6
+                images.
               </p>
+              <label>
+                Image URLs
+                <textarea
+                  value={imageUrls.join("\n")}
+                  onChange={(event) =>
+                    setImageUrls(
+                      event.target.value
+                        .split(/\r?\n/)
+                        .map((url) => url.trim())
+                        .filter(Boolean),
+                    )
+                  }
+                  placeholder="https://example.com/image-1.jpg"
+                />
+              </label>
             </section>
 
             <section className="settings-panel business-address-panel">
@@ -264,23 +413,42 @@ export function OrganizationProfilePage() {
               <div className="profile-form-grid address-grid">
                 <label className="wide-field">
                   Address
-                  <input defaultValue="12 Freedom Way, Lekki Phase 1" />
+                  <input
+                    value={addressLine}
+                    onChange={(event) => setAddressLine(event.target.value)}
+                    placeholder="12 Freedom Way, Lekki Phase 1"
+                  />
                 </label>
                 <label>
                   City
-                  <input defaultValue="Lagos" />
+                  <input
+                    value={city}
+                    onChange={(event) => setCity(event.target.value)}
+                    placeholder="Lagos"
+                  />
                 </label>
                 <label>
                   State
-                  <input defaultValue="Lagos" />
+                  <input
+                    value={state}
+                    onChange={(event) => setState(event.target.value)}
+                    placeholder="Lagos"
+                  />
                 </label>
                 <label>
                   Postal Code
-                  <input defaultValue="106104" />
+                  <input
+                    value={postalCode}
+                    onChange={(event) => setPostalCode(event.target.value)}
+                    placeholder="106104"
+                  />
                 </label>
                 <label>
                   Country
-                  <select defaultValue="Nigeria">
+                  <select
+                    value={country}
+                    onChange={(event) => setCountry(event.target.value)}
+                  >
                     <option>Nigeria</option>
                   </select>
                 </label>
@@ -292,11 +460,16 @@ export function OrganizationProfilePage() {
                 <h2>Business Hours</h2>
               </header>
               <div className="business-hours-list">
-                {["Monday - Friday", "Saturday", "Sunday"].map((day, index) => (
-                  <div className="business-hours-row" key={day}>
-                    <strong>{day}</strong>
+                {businessHours.map((hour, index) => (
+                  <div className="business-hours-row" key={hour.label}>
+                    <strong>{hour.label}</strong>
                     <select
-                      defaultValue={index === 0 ? "05:00 AM" : "07:00 AM"}
+                      value={hour.opensAt}
+                      onChange={(event) =>
+                        updateBusinessHour(index, {
+                          opensAt: event.target.value,
+                        })
+                      }
                     >
                       <option>05:00 AM</option>
                       <option>07:00 AM</option>
@@ -304,21 +477,40 @@ export function OrganizationProfilePage() {
                     </select>
                     <span>-</span>
                     <select
-                      defaultValue={index === 2 ? "05:00 PM" : "10:00 PM"}
+                      value={hour.closesAt}
+                      onChange={(event) =>
+                        updateBusinessHour(index, {
+                          closesAt: event.target.value,
+                        })
+                      }
                     >
                       <option>05:00 PM</option>
                       <option>08:00 PM</option>
                       <option>10:00 PM</option>
                     </select>
                     <label className="checkbox-label">
-                      <input type="checkbox" defaultChecked />
+                      <input
+                        type="checkbox"
+                        checked={hour.isOpen}
+                        onChange={(event) =>
+                          updateBusinessHour(index, {
+                            isOpen: event.target.checked,
+                          })
+                        }
+                      />
                       Open
                     </label>
                   </div>
                 ))}
               </div>
               <label className="checkbox-label holiday-toggle">
-                <input type="checkbox" />
+                <input
+                  type="checkbox"
+                  checked={closedOnPublicHolidays}
+                  onChange={(event) =>
+                    setClosedOnPublicHolidays(event.target.checked)
+                  }
+                />
                 Closed on public holidays
               </label>
             </section>
@@ -336,4 +528,36 @@ export function OrganizationProfilePage() {
       )}
     </main>
   );
+
+  function updateBusinessHour(index: number, patch: Partial<BusinessHour>) {
+    setBusinessHours((current) =>
+      current.map((hour, currentIndex) =>
+        currentIndex === index ? { ...hour, ...patch } : hour,
+      ),
+    );
+  }
+}
+
+function emptyToUndefined(value: string) {
+  const trimmed = value.trim();
+
+  return trimmed || undefined;
+}
+
+function parseBusinessHours(value: unknown): BusinessHour[] | null {
+  if (!Array.isArray(value)) {
+    return null;
+  }
+
+  const hours = value.filter(
+    (hour): hour is BusinessHour =>
+      typeof hour === "object" &&
+      hour !== null &&
+      "label" in hour &&
+      "opensAt" in hour &&
+      "closesAt" in hour &&
+      "isOpen" in hour,
+  );
+
+  return hours.length > 0 ? hours : null;
 }

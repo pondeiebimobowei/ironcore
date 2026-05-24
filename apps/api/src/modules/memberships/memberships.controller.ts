@@ -8,6 +8,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { requireOrganizationId } from '../auth/require-organization-id';
 import type { AuthenticatedRequest } from '../auth/types/authenticated-request.type';
 import { CreateMembershipDto } from './dto/create-membership.dto';
 import { RenewMembershipDto } from './dto/renew-membership.dto';
@@ -26,7 +27,7 @@ export class MembershipsController {
     @Body() dto: CreateMembershipDto,
   ) {
     return this.membershipsService.create(
-      req.user!.organizationId,
+      requireOrganizationId(req),
       memberId,
       dto,
     );
@@ -38,7 +39,7 @@ export class MembershipsController {
     @Param('id') id: string,
     @Body() dto: UpdateMembershipDto,
   ) {
-    return this.membershipsService.update(req.user!.organizationId, id, dto);
+    return this.membershipsService.update(requireOrganizationId(req), id, dto);
   }
 
   @Post('memberships/:id/renew')
@@ -47,6 +48,6 @@ export class MembershipsController {
     @Param('id') id: string,
     @Body() dto: RenewMembershipDto,
   ) {
-    return this.membershipsService.renew(req.user!.organizationId, id, dto);
+    return this.membershipsService.renew(requireOrganizationId(req), id, dto);
   }
 }

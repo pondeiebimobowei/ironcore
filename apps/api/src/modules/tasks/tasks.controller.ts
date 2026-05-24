@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { TaskStatus } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { requireOrganizationId } from '../auth/require-organization-id';
 import type { AuthenticatedRequest } from '../auth/types/authenticated-request.type';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
@@ -47,6 +48,6 @@ export class TasksController {
   }
 
   private organizationId(req: AuthenticatedRequest) {
-    return req.user!.organizationId;
+    return requireOrganizationId(req);
   }
 }

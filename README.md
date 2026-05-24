@@ -226,7 +226,8 @@ Both require an authenticated owner account.
 
 - WhatsApp is mocked; no real WhatsApp Business API messages are sent.
 - Billing is a placeholder and does not connect to a payment processor.
-- Organization profile persistence currently covers the organization name and slug; extended branding/contact fields are UI placeholders.
+- Organization profile persistence covers core business, contact, address, business-hour, logo URL, and image URL fields.
+- Image and logo upload mechanics are placeholders; URLs can be stored, but file storage is not enabled yet.
 - File proof upload/storage is not enabled yet.
 - Deployment items such as Coolify, SSL, production backups, and smoke testing must be completed in the deployment environment.
 

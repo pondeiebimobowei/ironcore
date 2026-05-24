@@ -5,6 +5,7 @@ import { SignupPage } from "../pages/auth/SignupPage";
 import { DashboardPage } from "../pages/dashboard/DashboardPage";
 import { MemberDetailPage } from "../pages/members/MemberDetailPage";
 import { MembersPage } from "../pages/members/MembersPage";
+import { CompanySetupPage } from "../pages/onboarding/CompanySetupPage";
 import { PaymentDetailPage } from "../pages/payments/PaymentDetailPage";
 import { PaymentsPage } from "../pages/payments/PaymentsPage";
 import { RecordPaymentPage } from "../pages/payments/RecordPaymentPage";
@@ -24,6 +25,7 @@ export const router = createBrowserRouter([
     children: [
       { path: "/login", element: <LoginPage /> },
       { path: "/signup", element: <SignupPage /> },
+      { path: "/onboarding/company", element: <CompanySetupPage /> },
       {
         element: <ProtectedRoute />,
         children: [

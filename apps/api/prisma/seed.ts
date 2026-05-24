@@ -398,11 +398,50 @@ async function main() {
       data: {
         name: 'Peak Performance Gym',
         slug: demoOrganizationSlug,
+        tagline: 'Stronger Every Day',
+        description:
+          'A focused fitness facility helping members recover momentum, renew on time, and stay consistent.',
+        establishedYear: 2021,
+        businessType: 'Personal Training Gym',
+        organizationSize: '6-20',
+        websiteUrl: 'https://peakperformance.local',
+        contactEmail: 'info@peakperformance.local',
+        primaryPhone: '+234 801 234 5678',
+        secondaryPhone: '+234 809 876 5432',
+        addressLine: '12 Freedom Way, Lekki Phase 1',
+        city: 'Lagos',
+        state: 'Lagos',
+        postalCode: '106104',
+        country: 'Nigeria',
+        businessHours: [
+          {
+            label: 'Monday - Friday',
+            opensAt: '05:00 AM',
+            closesAt: '10:00 PM',
+            isOpen: true,
+          },
+          {
+            label: 'Saturday',
+            opensAt: '07:00 AM',
+            closesAt: '10:00 PM',
+            isOpen: true,
+          },
+          {
+            label: 'Sunday',
+            opensAt: '07:00 AM',
+            closesAt: '05:00 PM',
+            isOpen: true,
+          },
+        ],
+        closedOnPublicHolidays: false,
+        logoUrl: null,
+        imageUrls: [],
       },
     });
 
     const owner = await tx.user.create({
       data: {
+        fullName: 'John Owner',
         email: demoOwnerEmail,
         passwordHash: await hash(demoOwnerPassword, 12),
       },

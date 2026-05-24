@@ -1,5 +1,6 @@
 import { Controller, Get, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { requireOrganizationId } from '../auth/require-organization-id';
 import type { AuthenticatedRequest } from '../auth/types/authenticated-request.type';
 import { DashboardService } from './dashboard.service';
 
@@ -10,6 +11,6 @@ export class DashboardController {
 
   @Get('summary')
   summary(@Req() req: AuthenticatedRequest) {
-    return this.dashboardService.summary(req.user!.organizationId);
+    return this.dashboardService.summary(requireOrganizationId(req));
   }
 }

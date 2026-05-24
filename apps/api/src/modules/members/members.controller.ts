@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import { MemberStatus } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { requireOrganizationId } from '../auth/require-organization-id';
 import type { AuthenticatedRequest } from '../auth/types/authenticated-request.type';
 import { CreateMemberDto } from './dto/create-member.dto';
 import { ConfirmImportDto, ImportMembersDto } from './dto/import-members.dto';
@@ -87,6 +88,6 @@ export class MembersController {
   }
 
   private organizationId(req: AuthenticatedRequest) {
-    return req.user!.organizationId;
+    return requireOrganizationId(req);
   }
 }

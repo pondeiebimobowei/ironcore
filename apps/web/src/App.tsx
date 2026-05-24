@@ -17,7 +17,7 @@ export function AppLayout() {
   const auth = useAuth();
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
-  if (!auth.isAuthenticated) {
+  if (!auth.isAuthenticated || auth.onboardingRequired) {
     return (
       <div className="app-shell auth-shell">
         <Outlet />

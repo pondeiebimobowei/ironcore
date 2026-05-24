@@ -1,22 +1,88 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import {
+  OrganizationMembershipStatus,
+  OrganizationRole,
+  Prisma,
+} from '@prisma/client';
 import { randomBytes } from 'crypto';
 import { PrismaService } from '../database/prisma.service';
+import { SetupOrganizationDto } from './dto/setup-organization.dto';
 import { UpdateOrganizationDto } from './dto/update-organization.dto';
 
 @Injectable()
 export class OrganizationsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  async setup(userId: string, dto: SetupOrganizationDto) {
+    const name = dto.name?.trim();
+
+    if (!name) {
+      throw new BadRequestException('Organization name is required');
+    }
+
+    const existingMembership =
+      await this.prisma.organizationMembership.findFirst({
+        where: {
+          userId,
+          status: OrganizationMembershipStatus.ACTIVE,
+        },
+        select: { id: true },
+      });
+
+    if (existingMembership) {
+      throw new BadRequestException('Organization is already set up');
+    }
+
+    const organization = await this.prisma.$transaction(async (tx) => {
+      const createdOrganization = await tx.organization.create({
+        data: {
+          name,
+          slug: await this.createAvailableSlug(name),
+          tagline: dto.tagline,
+          description: dto.description,
+          establishedYear: dto.establishedYear,
+          businessType: dto.businessType,
+          organizationSize: dto.organizationSize,
+          websiteUrl: dto.websiteUrl,
+          contactEmail: dto.contactEmail,
+          primaryPhone: dto.primaryPhone,
+          secondaryPhone: dto.secondaryPhone,
+          addressLine: dto.addressLine,
+          city: dto.city,
+          state: dto.state,
+          postalCode: dto.postalCode,
+          country: dto.country,
+          businessHours: dto.businessHours as Prisma.InputJsonValue | undefined,
+          closedOnPublicHolidays: dto.closedOnPublicHolidays,
+          logoUrl: dto.logoUrl,
+          imageUrls: dto.imageUrls,
+        },
+      });
+
+      await tx.organizationMembership.create({
+        data: {
+          organizationId: createdOrganization.id,
+          userId,
+          role: OrganizationRole.OWNER,
+          status: OrganizationMembershipStatus.ACTIVE,
+          acceptedAt: new Date(),
+        },
+      });
+
+      return createdOrganization;
+    });
+
+    return this.getCurrent(organization.id);
+  }
+
   async getCurrent(organizationId: string) {
     const organization = await this.prisma.organization.findUnique({
       where: { id: organizationId },
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      select: this.organizationSelect,
     });
 
     if (!organization) {
@@ -29,22 +95,85 @@ export class OrganizationsService {
   async updateCurrent(organizationId: string, dto: UpdateOrganizationDto) {
     const current = await this.getCurrent(organizationId);
     const name = dto.name?.trim();
+    const data = this.compactOrganizationData(dto);
 
-    if (!name || name === current.name) {
+    if (name && name !== current.name) {
+      data.name = name;
+      data.slug = await this.createAvailableSlug(name, organizationId);
+    }
+
+    if (Object.keys(data).length === 0) {
       return current;
     }
 
-    const slug = await this.createAvailableSlug(name, organizationId);
-
     await this.prisma.organization.update({
       where: { id: organizationId },
-      data: { name, slug },
+      data,
     });
 
     return this.getCurrent(organizationId);
   }
 
-  private async createAvailableSlug(name: string, organizationId: string) {
+  private compactOrganizationData(dto: UpdateOrganizationDto) {
+    return Object.fromEntries(
+      Object.entries(this.organizationData(dto)).filter(
+        ([, value]) => value !== undefined,
+      ),
+    ) as Prisma.OrganizationUpdateInput;
+  }
+
+  private organizationData(dto: UpdateOrganizationDto) {
+    return {
+      tagline: dto.tagline,
+      description: dto.description,
+      establishedYear: dto.establishedYear,
+      businessType: dto.businessType,
+      organizationSize: dto.organizationSize,
+      websiteUrl: dto.websiteUrl,
+      contactEmail: dto.contactEmail,
+      primaryPhone: dto.primaryPhone,
+      secondaryPhone: dto.secondaryPhone,
+      addressLine: dto.addressLine,
+      city: dto.city,
+      state: dto.state,
+      postalCode: dto.postalCode,
+      country: dto.country,
+      businessHours: dto.businessHours as Prisma.InputJsonValue | undefined,
+      closedOnPublicHolidays: dto.closedOnPublicHolidays,
+      logoUrl: dto.logoUrl,
+      imageUrls: dto.imageUrls,
+    } satisfies Prisma.OrganizationUpdateInput;
+  }
+
+  private get organizationSelect() {
+    return {
+      id: true,
+      name: true,
+      slug: true,
+      tagline: true,
+      description: true,
+      establishedYear: true,
+      businessType: true,
+      organizationSize: true,
+      websiteUrl: true,
+      contactEmail: true,
+      primaryPhone: true,
+      secondaryPhone: true,
+      addressLine: true,
+      city: true,
+      state: true,
+      postalCode: true,
+      country: true,
+      businessHours: true,
+      closedOnPublicHolidays: true,
+      logoUrl: true,
+      imageUrls: true,
+      createdAt: true,
+      updatedAt: true,
+    } satisfies Prisma.OrganizationSelect;
+  }
+
+  private async createAvailableSlug(name: string, organizationId?: string) {
     const baseSlug = this.slugify(name);
 
     for (let attempt = 0; attempt < 25; attempt += 1) {

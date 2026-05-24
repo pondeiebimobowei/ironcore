@@ -510,17 +510,19 @@ POST   /api/admin/workflows/run  # (Admin debug route; main trigger is internal 
 
 MVP rule:
 
-- every user belongs to one organization
+- every user can exist before organization setup
+- tenant-scoped product routes require an active organization membership
 - every query must be scoped by organization
 - never trust client-provided `organizationId`
-- derive organization from the authenticated JWT payload
+- derive organization from the authenticated JWT payload after setup
 
 JWT strategy:
 
 - `POST /api/auth/login` → returns `accessToken` (body) + `refreshToken` (httpOnly cookie)
 - `POST /api/auth/refresh` → validates refresh token, rotates it, issues new access token
 - `POST /api/auth/logout` → invalidates refresh token
-- `POST /api/auth/signup` → creates user + hashes password with bcrypt
+- `POST /api/auth/signup` → creates account-only user + hashes password with bcrypt
+- `POST /api/organization/setup` → creates the first organization + owner membership and returns a fresh session with organization claims
 - Access token verified on every protected request via `Authorization: Bearer <token>` header
 - Refresh token stored in DB and rotated on every use (old token invalidated immediately)
 
@@ -2194,7 +2196,8 @@ Enable tenant-aware authenticated access with custom JWT.
 
 ### Tasks
 
-- implement signup (bcrypt password hash, create User + Organization)
+- implement signup (bcrypt password hash, create account-only User)
+- implement organization setup (create Organization + owner OrganizationMembership)
 - implement login (validate credentials directly in AuthService, issue access + refresh tokens)
 - implement refresh token rotation endpoint
 - implement logout (invalidate refresh token)

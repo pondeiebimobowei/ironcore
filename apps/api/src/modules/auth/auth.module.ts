@@ -11,6 +11,6 @@ import { JwtStrategy } from './jwt.strategy';
   imports: [DatabaseModule, JwtModule.register({})],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy, JwtAuthGuard, AuthRateLimitGuard],
-  exports: [JwtStrategy, JwtAuthGuard],
+  exports: [AuthService, JwtStrategy, JwtAuthGuard],
 })
 export class AuthModule {}

@@ -8,6 +8,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { requireOrganizationId } from '../auth/require-organization-id';
 import type { AuthenticatedRequest } from '../auth/types/authenticated-request.type';
 import { UpdateWorkflowDto } from './dto/update-workflow.dto';
 import { WorkflowsService } from './workflows.service';
@@ -19,7 +20,7 @@ export class WorkflowsController {
 
   @Get()
   list(@Req() req: AuthenticatedRequest) {
-    return this.workflowsService.list(req.user!.organizationId);
+    return this.workflowsService.list(requireOrganizationId(req));
   }
 
   @Patch(':id')
@@ -28,6 +29,6 @@ export class WorkflowsController {
     @Param('id') id: string,
     @Body() dto: UpdateWorkflowDto,
   ) {
-    return this.workflowsService.update(req.user!.organizationId, id, dto);
+    return this.workflowsService.update(requireOrganizationId(req), id, dto);
   }
 }

@@ -31,45 +31,19 @@ export class AuthService {
 
   async signup(dto: SignupDto): Promise<AuthSession> {
     const email = dto.email.trim().toLowerCase();
-    const organizationName = dto.organizationName.trim();
+    const fullName = dto.fullName.trim();
     const passwordHash = await hash(dto.password, this.bcryptRounds);
 
     try {
-      const { user, organization, membership } = await this.prisma.$transaction(
-        async (tx) => {
-          const createdOrganization = await tx.organization.create({
-            data: {
-              name: organizationName,
-              slug: await this.createAvailableSlug(tx, organizationName),
-            },
-          });
-
-          const createdUser = await tx.user.create({
-            data: {
-              email,
-              passwordHash,
-            },
-          });
-
-          const createdMembership = await tx.organizationMembership.create({
-            data: {
-              organizationId: createdOrganization.id,
-              userId: createdUser.id,
-              role: OrganizationRole.OWNER,
-              status: OrganizationMembershipStatus.ACTIVE,
-              acceptedAt: new Date(),
-            },
-          });
-
-          return {
-            user: createdUser,
-            organization: createdOrganization,
-            membership: createdMembership,
-          };
+      const user = await this.prisma.user.create({
+        data: {
+          fullName,
+          email,
+          passwordHash,
         },
-      );
+      });
 
-      return this.createSession(user, membership, organization);
+      return this.createSession(user, null, null);
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -109,7 +83,11 @@ export class AuthService {
 
     const membership = this.getDefaultMembership(user.organizationMemberships);
 
-    return this.createSession(user, membership, membership.organization);
+    return this.createSession(
+      user,
+      membership,
+      membership?.organization ?? null,
+    );
   }
 
   async refresh(refreshToken: string | undefined): Promise<AuthSession> {
@@ -153,7 +131,32 @@ export class AuthService {
     return this.createSession(
       storedToken.user,
       membership,
-      membership.organization,
+      membership?.organization ?? null,
+    );
+  }
+
+  async createSessionForUser(userId: string): Promise<AuthSession> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        organizationMemberships: {
+          where: { status: OrganizationMembershipStatus.ACTIVE },
+          include: { organization: true },
+          orderBy: { createdAt: 'asc' },
+        },
+      },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    const membership = this.getDefaultMembership(user.organizationMemberships);
+
+    return this.createSession(
+      user,
+      membership,
+      membership?.organization ?? null,
     );
   }
 
@@ -174,26 +177,30 @@ export class AuthService {
   private async createSession(
     user: {
       id: string;
+      fullName: string;
       email: string;
     },
     membership: {
       id: string;
       organizationId: string;
       role: OrganizationRole;
-    },
+    } | null,
     organization: {
       id: string;
       name: string;
       slug: string;
-    },
+    } | null,
   ): Promise<AuthSession> {
     const payload: JwtPayload = {
       sub: user.id,
       email: user.email,
-      role: membership.role,
-      organizationId: membership.organizationId,
-      organizationMembershipId: membership.id,
     };
+
+    if (membership) {
+      payload.role = membership.role;
+      payload.organizationId = membership.organizationId;
+      payload.organizationMembershipId = membership.id;
+    }
     const refreshToken = this.createOpaqueToken();
     const tokenHash = this.hashRefreshToken(refreshToken);
 
@@ -213,14 +220,18 @@ export class AuthService {
       refreshToken,
       user: {
         id: user.id,
+        fullName: user.fullName,
         email: user.email,
-        role: membership.role,
+        role: membership?.role ?? null,
       },
-      organization: {
-        id: organization.id,
-        name: organization.name,
-        slug: organization.slug,
-      },
+      organization: organization
+        ? {
+            id: organization.id,
+            name: organization.name,
+            slug: organization.slug,
+          }
+        : null,
+      onboardingRequired: !organization,
     };
   }
 
@@ -236,46 +247,7 @@ export class AuthService {
       };
     },
   >(memberships: T[]) {
-    const membership = memberships[0];
-
-    if (!membership) {
-      throw new UnauthorizedException(
-        'No active organization membership found',
-      );
-    }
-
-    return membership;
-  }
-
-  private async createAvailableSlug(
-    tx: Prisma.TransactionClient,
-    name: string,
-  ) {
-    const baseSlug = this.slugify(name);
-
-    for (let attempt = 0; attempt < 25; attempt += 1) {
-      const slug = attempt === 0 ? baseSlug : `${baseSlug}-${attempt + 1}`;
-      const existing = await tx.organization.findUnique({
-        where: { slug },
-        select: { id: true },
-      });
-
-      if (!existing) {
-        return slug;
-      }
-    }
-
-    return `${baseSlug}-${randomBytes(4).toString('hex')}`;
-  }
-
-  private slugify(value: string) {
-    const slug = value
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '');
-
-    return slug || 'organization';
+    return memberships[0] ?? null;
   }
 
   private createOpaqueToken() {

@@ -6,6 +6,7 @@ import { AuthContext } from "./AuthContext";
 import type {
   AuthContextValue,
   AuthOrganization,
+  OrganizationSetupInput,
   AuthSession,
   AuthUser,
 } from "./AuthContext";
@@ -16,23 +17,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [organization, setOrganization] = useState<AuthOrganization | null>(
     null,
   );
+  const [onboardingRequired, setOnboardingRequired] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
 
   const applySession = useCallback((session: AuthSession) => {
     setAccessToken(session.accessToken);
     setUser(session.user);
     setOrganization(session.organization);
+    setOnboardingRequired(session.onboardingRequired);
   }, []);
 
   const clearSession = useCallback(() => {
     setAccessToken(null);
     setUser(null);
     setOrganization(null);
+    setOnboardingRequired(false);
   }, []);
 
-  const updateOrganization = useCallback((nextOrganization: AuthOrganization) => {
-    setOrganization(nextOrganization);
-  }, []);
+  const updateOrganization = useCallback(
+    (nextOrganization: AuthOrganization) => {
+      setOrganization(nextOrganization);
+    },
+    [],
+  );
 
   const refresh = useCallback(async () => {
     try {
@@ -58,6 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       organization,
       isAuthenticated: Boolean(user),
+      onboardingRequired,
       isInitializing,
       async login(input) {
         const response = await apiClient.post<AuthSession>(
@@ -66,8 +74,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         );
         applySession(response.data);
         captureEvent("user_logged_in", response.data.user.id, {
-          organizationId: response.data.organization.id,
+          organizationId: response.data.organization?.id,
         });
+        return response.data;
       },
       async signup(input) {
         const response = await apiClient.post<AuthSession>(
@@ -75,9 +84,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           input,
         );
         applySession(response.data);
-        captureEvent("organization_signed_up", response.data.user.id, {
-          organizationId: response.data.organization.id,
+        captureEvent("user_signed_up", response.data.user.id, {
+          onboardingRequired: response.data.onboardingRequired,
         });
+        return response.data;
+      },
+      async setupOrganization(input: OrganizationSetupInput) {
+        const response = await apiClient.post<AuthSession>(
+          "/api/organization/setup",
+          input,
+        );
+        applySession(response.data);
+        captureEvent("organization_signed_up", response.data.user.id, {
+          organizationId: response.data.organization?.id,
+        });
+        return response.data;
       },
       updateOrganization,
       refresh,
@@ -95,6 +116,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       applySession,
       clearSession,
       isInitializing,
+      onboardingRequired,
       organization,
       refresh,
       updateOrganization,
