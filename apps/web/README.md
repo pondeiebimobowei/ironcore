@@ -1,73 +1,75 @@
-# React + TypeScript + Vite
+# IronCore Retain Web App
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Vite + React SPA for the IronCore Retain MVP.
 
-Currently, two official plugins are available:
+The web app exposes the recovery-focused operator experience: signup, organization setup, dashboard metrics, member management, recovery queue, payment verification, workflow review, task management, and settings.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Local Development
 
-## React Compiler
+From the repository root:
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+cp .env.example .env
+npm run dev --workspace=apps/web
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+The Vite dev server defaults to `http://localhost:5173`.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+Run the API and database alongside it when using authenticated or data-backed screens:
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+docker compose -f docker/docker-compose.yml up -d db
+npm run dev --workspace=apps/api
 ```
+
+## Useful Commands
+
+```bash
+npm run build --workspace=apps/web
+npm run typecheck --workspace=apps/web
+npm run lint --workspace=apps/web
+npm run preview --workspace=apps/web
+```
+
+## Routes
+
+```txt
+/login
+/signup
+/onboarding/company
+/
+/members
+/members/:memberId
+/payments
+/payments/record
+/payments/record/success/:paymentId
+/payments/:paymentId
+/recovery
+/workflows
+/workflows/new
+/tasks
+/settings
+/settings/organization
+/settings/billing
+```
+
+All product routes are protected by `ProtectedRoute`.
+
+## Frontend Structure
+
+```txt
+src/
+  components/     Reusable UI for dashboard, members, payments, tasks, workflows
+  features/       Typed API helpers and feature models
+  lib/            API client, auth, validation, monitoring, support, PostHog
+  pages/          Route-level page components
+  router/         React Router configuration
+```
+
+## Auth Notes
+
+- Access tokens are kept in memory.
+- Refresh tokens are stored in an httpOnly cookie set by the API.
+- The API client sends credentials and retries protected requests after silent refresh.
+- Tokens must not be persisted to localStorage or sessionStorage.

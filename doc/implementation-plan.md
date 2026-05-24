@@ -70,13 +70,10 @@ Create a clean, maintainable Vite + React + TypeScript + Prisma + PostgreSQL fou
 
 - Vite + React (SPA)
 - TypeScript
-- Tailwind CSS
-- shadcn/ui
-- Lucide React
-- TanStack Query
-- React Hook Form
+- React Router
+- Axios API client
 - Zod
-- React Router v6 (for client-side routing)
+- Plain CSS modules/global styles for the current MVP UI
 
 ### Backend
 
@@ -197,7 +194,6 @@ ironcore-retain/
           seed.ts
   docker/
     docker-compose.yml
-    docker-compose.prod.yml
     Dockerfile.web
     Dockerfile.api
   doc/
@@ -225,10 +221,7 @@ npx @nestjs/cli new apps/api
 
 # Frontend dependencies
 cd apps/web
-npm install react-router-dom @tanstack/react-query axios
-npm install react-hook-form @hookform/resolvers zod
-npm install date-fns lucide-react clsx tailwind-merge sonner
-npm install -D tailwindcss postcss autoprefixer
+npm install react-router-dom axios zod
 
 # Backend dependencies
 cd ../api
@@ -265,6 +258,7 @@ BCRYPT_ROUNDS=12
 
 # --- Monitoring ---
 GLITCHTIP_DSN=""
+VITE_GLITCHTIP_DSN=""
 VITE_POSTHOG_KEY=""
 VITE_POSTHOG_HOST="https://app.posthog.com"
 
@@ -355,8 +349,6 @@ chore:
 - app runs locally
 - TypeScript strict mode works
 - Prisma connects to PostgreSQL
-- Tailwind is configured
-- shadcn/ui is configured
 - `.env.example` exists
 - README includes local setup
 - lint and typecheck pass
@@ -557,8 +549,8 @@ apps/web/src/lib/auth/
 
 Use:
 
-- TanStack Query for server state (all API calls go through query/mutation hooks)
-- React Hook Form for forms
+- typed feature API helpers that call the shared Axios client
+- controlled React forms with Zod validation helpers where useful
 - Zod for schema validation
 - React Context only for global UI state (auth user, theme)
 - no Redux
@@ -1506,9 +1498,9 @@ WorkflowReviewPanel
 - allow active/paused toggle
 - preview sequence messages
 - show a workflow list screen with operational metrics and selected workflow details
-- provide a screen-only create workflow wizard for the fixed re-engagement campaign flow
+- provide a fixed create workflow wizard for the re-engagement campaign flow
 - allow users to review a configured workflow and see a success confirmation after activation
-- no backend persistence for custom workflow creation until the API plan is expanded
+- persist fixed workflow definitions through `POST /api/workflows` and update their status through `PATCH /api/workflows/:id`
 - no drag-and-drop builder, branching, or arbitrary automation logic
 
 ### Acceptance Criteria
@@ -1746,7 +1738,7 @@ Every API route must validate authorization and resolve Organization ID context 
 
 ## Form Validation
 
-Use Zod + React Hook Form.
+Use Zod-backed validation helpers.
 
 Rules:
 
@@ -1898,43 +1890,12 @@ npm run dev           # Turborepo starts api (:4000) + web (:5173) in parallel
 
 ## Containerisation
 
-Each app has its own Dockerfile:
+Each app has its own Dockerfile in `docker/`:
 
-```dockerfile
-# apps/api/Dockerfile
-FROM node:20-alpine AS builder
-WORKDIR /app
+- `docker/Dockerfile.api` installs workspace dependencies, generates Prisma Client, builds the NestJS API, and runs `npm run start:prod --workspace=apps/api`.
+- `docker/Dockerfile.web` builds the Vite app with public build args and serves the static bundle through Nginx.
 
-# Copy root lockfile and package.jsons to leverage caching
-COPY package*.json turbo.json ./
-COPY apps/api/package*.json ./apps/api/
-COPY packages/database/package*.json ./packages/database/
-# Install dependencies for api and database workspaces only
-RUN npm ci --workspace=apps/api --workspace=packages/database
-
-# Copy source code and packages
-COPY apps/api ./apps/api
-COPY packages/database ./packages/database
-
-# Generate Prisma Client (crucial step for NestJS dependency injection)
-RUN npx turbo run generate --filter=apps/api
-
-# Build NestJS API production bundle
-RUN npm run build --workspace=apps/api
-
-FROM node:20-alpine
-WORKDIR /app
-
-# Copy production bundle and node_modules
-COPY --from=builder /app/apps/api/dist ./dist
-COPY --from=builder /app/apps/api/node_modules ./node_modules
-COPY --from=builder /app/packages/database/prisma ./prisma
-
-# Auto-apply database migrations on startup
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main.js"]
-```
-
-`docker-compose.prod.yml` defines three services:
+`docker/docker-compose.yml` defines three services:
 
 ```yaml
 services:
@@ -1942,12 +1903,12 @@ services:
     image: postgres:16-alpine
   api:
     build:
-      context: .
+      context: ..
       dockerfile: docker/Dockerfile.api
     depends_on: [db]
   web:
     build:
-      context: .
+      context: ..
       dockerfile: docker/Dockerfile.web
 ```
 
@@ -1959,7 +1920,7 @@ Coolify manages the VPS and wraps Docker Compose:
 
 1. Connect GitHub repo to Coolify project
 2. Set build pack to **Docker Compose**
-3. Point to `docker/docker-compose.prod.yml`
+3. Point to `docker/docker-compose.yml`
 4. Configure environment variables in Coolify dashboard (never commit secrets)
 5. Enable Coolify automatic deploys on `main` branch push
 6. Coolify provisions SSL (Let's Encrypt) for both `app.ironcore.io` (web) and `api.ironcore.io` (api)
@@ -2016,7 +1977,7 @@ Production (run inside container on deploy):
 npm run db:migrate:deploy
 ```
 
-Add migration step as a pre-start command in `Dockerfile.api`.
+Run the migration command before first production traffic or during a controlled release.
 
 ---
 
@@ -2095,8 +2056,6 @@ Set up app, tooling, database, and architecture.
 - initialize Vite + React app (`apps/web`)
 - initialize NestJS backend (`apps/api`)
 - install dependencies
-- configure Tailwind
-- configure shadcn/ui
 - configure Prisma
 - configure lint/prettier
 - create folder structure
@@ -2108,7 +2067,6 @@ Set up app, tooling, database, and architecture.
 
 ```txt
 apps/web/vite.config.ts
-apps/web/tailwind.config.ts
 apps/api/src/app.module.ts
 apps/api/prisma/schema.prisma
 docker/docker-compose.yml
@@ -2450,7 +2408,7 @@ Simulate automated recovery workflows.
 - create workflow execution job
 - create message logs
 - build workflows page
-- build screen-only create workflow wizard for the fixed re-engagement campaign
+- build fixed create workflow wizard backed by the workflow definition API
 - prevent duplicate sends
 
 ### Files
@@ -2552,7 +2510,7 @@ Prepare the MVP for pilot use.
 - add responsive cleanup
 - add empty/error states
 - add analytics events
-- configure glitchTIp
+- configure GlitchTip
 - update documentation
 
 ### Files
