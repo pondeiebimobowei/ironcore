@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { getDashboardSummary } from "../../features/dashboard/api";
 import type { DashboardSummary } from "../../features/dashboard/types";
 import { useAuth } from "../../lib/auth/AuthContext";
+import { useOrganizationFormatters } from "../../lib/format/organization";
 
 const emptySummary: DashboardSummary = {
   revenueAtRisk: 0,
@@ -38,12 +39,6 @@ const statusPalette: Record<string, string> = {
   PENDING_VERIFICATION: "#3b82f6",
   CHURNED: "#9ca3af",
 };
-
-function formatCurrency(value: number) {
-  return `₦${new Intl.NumberFormat("en-NG", {
-    maximumFractionDigits: 0,
-  }).format(value)}`;
-}
 
 function formatRelativeTime(value: string) {
   if (!value) {
@@ -112,6 +107,7 @@ function donutBackground(summary: DashboardSummary) {
 
 export function DashboardPage() {
   const { organization, user } = useAuth();
+  const { formatCurrency } = useOrganizationFormatters();
   const [summary, setSummary] = useState<DashboardSummary>(emptySummary);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -251,7 +247,7 @@ export function DashboardPage() {
                   <span>{formatCurrency(maxTrendValue * 0.75)}</span>
                   <span>{formatCurrency(maxTrendValue * 0.5)}</span>
                   <span>{formatCurrency(maxTrendValue * 0.25)}</span>
-                  <span>₦0</span>
+                  <span>{formatCurrency(0)}</span>
                 </div>
                 <div className="chart-plot">
                   <svg viewBox="0 0 100 100" preserveAspectRatio="none">

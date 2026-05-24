@@ -29,6 +29,11 @@ export class MembershipsService {
       throw new NotFoundException('Plan not found');
     }
 
+    const currency =
+      dto.currency ??
+      plan?.currency ??
+      (await this.organizationCurrency(organizationId));
+
     const membership = await this.prisma.$transaction(async (tx) => {
       const created = await tx.membership.create({
         data: {
@@ -38,7 +43,7 @@ export class MembershipsService {
           startDate: new Date(dto.startDate),
           expiryDate: new Date(dto.expiryDate),
           amount: dto.amount ?? plan?.amount ?? '0',
-          currency: dto.currency ?? plan?.currency ?? 'NGN',
+          currency,
           status: MembershipStatus.ACTIVE,
         },
       });
@@ -164,5 +169,14 @@ export class MembershipsService {
     if (!member) {
       throw new NotFoundException('Member not found');
     }
+  }
+
+  private async organizationCurrency(organizationId: string) {
+    const organization = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { currency: true },
+    });
+
+    return organization?.currency ?? 'NGN';
   }
 }

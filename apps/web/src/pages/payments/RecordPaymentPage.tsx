@@ -1,4 +1,10 @@
-import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  type FormEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { listMembers } from "../../features/members/api";
 import type { MemberSummary } from "../../features/members/types";
@@ -8,6 +14,7 @@ import {
   type RecordPaymentFormInput,
   validateRecordPayment,
 } from "../../lib/validations/payment";
+import { useOrganizationFormatters } from "../../lib/format/organization";
 
 const paymentMethods: Array<{ label: string; value: PaymentMethod }> = [
   { label: "Bank Transfer", value: "BANK_TRANSFER" },
@@ -25,21 +32,13 @@ function fullName(member?: MemberSummary | null) {
   return [member.firstName, member.lastName].filter(Boolean).join(" ");
 }
 
-function formatCurrency(value: string | number | undefined | null) {
-  const amount = Number(value ?? 0);
-
-  return `₦${new Intl.NumberFormat("en-NG", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(Number.isFinite(amount) ? amount : 0)}`;
-}
-
 function todayInputValue() {
   return new Date().toISOString().slice(0, 10);
 }
 
 export function RecordPaymentPage() {
   const navigate = useNavigate();
+  const { formatCurrency, formatDate } = useOrganizationFormatters();
   const [searchParams] = useSearchParams();
   const requestedMemberId = searchParams.get("memberId") ?? "";
   const [members, setMembers] = useState<MemberSummary[]>([]);
@@ -68,7 +67,9 @@ export function RecordPaymentPage() {
       const data = await listMembers({});
       setMembers(data);
       const initialMemberId = requestedMemberId || data[0]?.id || "";
-      const initialMember = data.find((member) => member.id === initialMemberId);
+      const initialMember = data.find(
+        (member) => member.id === initialMemberId,
+      );
       setSelectedMemberId(initialMemberId);
       applyMembershipDefaults(initialMember);
     } catch {
@@ -102,7 +103,9 @@ export function RecordPaymentPage() {
   );
 
   const handleMemberChange = (memberId: string) => {
-    const member = members.find((currentMember) => currentMember.id === memberId);
+    const member = members.find(
+      (currentMember) => currentMember.id === memberId,
+    );
     setSelectedMemberId(memberId);
     applyMembershipDefaults(member);
   };
@@ -151,7 +154,9 @@ export function RecordPaymentPage() {
         state: { payment },
       });
     } catch {
-      setError("Could not record this payment. Try again when the API is available.");
+      setError(
+        "Could not record this payment. Try again when the API is available.",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -212,7 +217,9 @@ export function RecordPaymentPage() {
                 <label>
                   Payment Type
                   <select defaultValue="MEMBERSHIP_PAYMENT">
-                    <option value="MEMBERSHIP_PAYMENT">Membership Payment</option>
+                    <option value="MEMBERSHIP_PAYMENT">
+                      Membership Payment
+                    </option>
                   </select>
                 </label>
                 <label>
@@ -365,9 +372,7 @@ export function RecordPaymentPage() {
                       <dt>Next Billing Date</dt>
                       <dd>
                         {selectedMembership
-                          ? new Date(
-                              selectedMembership.expiryDate,
-                            ).toLocaleDateString()
+                          ? formatDate(selectedMembership.expiryDate)
                           : "Not set"}
                       </dd>
                     </div>
@@ -393,11 +398,7 @@ export function RecordPaymentPage() {
                 </div>
                 <div>
                   <dt>Discount</dt>
-                  <dd>₦0.00</dd>
-                </div>
-                <div>
-                  <dt>Tax (0%)</dt>
-                  <dd>₦0.00</dd>
+                  <dd>{formatCurrency(0)}</dd>
                 </div>
                 <div className="billing-total">
                   <dt>Total Paid</dt>

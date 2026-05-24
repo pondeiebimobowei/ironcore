@@ -109,6 +109,9 @@ export class MembersService {
 
   async create(organizationId: string, dto: CreateMemberDto) {
     await this.ensureUniquePhone(organizationId, dto.phoneNumber);
+    const organizationCurrency = dto.expiryDate
+      ? await this.organizationCurrency(organizationId)
+      : 'NGN';
 
     const member = await this.prisma.$transaction(async (tx) => {
       const createdMember = await tx.member.create({
@@ -141,7 +144,7 @@ export class MembersService {
             expiryDate,
             status: MembershipStatus.ACTIVE,
             amount: plan?.amount ?? '0',
-            currency: plan?.currency ?? 'NGN',
+            currency: plan?.currency ?? organizationCurrency,
           },
         });
       }
@@ -399,6 +402,15 @@ export class MembersService {
         'A member with this phone number already exists',
       );
     }
+  }
+
+  private async organizationCurrency(organizationId: string) {
+    const organization = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { currency: true },
+    });
+
+    return organization?.currency ?? 'NGN';
   }
 
   private optionalTrim(value: string | undefined) {

@@ -14,6 +14,7 @@ import { RecoveryQueuePage } from "../pages/recovery/RecoveryQueuePage";
 import { BillingPage } from "../pages/settings/BillingPage";
 import { OrganizationProfilePage } from "../pages/settings/OrganizationProfilePage";
 import { SettingsPage } from "../pages/settings/SettingsPage";
+import { SettingsPlaceholderPage } from "../pages/settings/SettingsPlaceholderPage";
 import { CreateTaskPage } from "../pages/tasks/CreateTaskPage";
 import { TasksPage } from "../pages/tasks/TasksPage";
 import { CreateWorkflowPage } from "../pages/workflows/CreateWorkflowPage";
@@ -51,6 +52,26 @@ export const router = createBrowserRouter([
             element: <OrganizationProfilePage />,
           },
           { path: "/settings/billing", element: <BillingPage /> },
+          {
+            path: "/settings/users",
+            element: <SettingsPlaceholderPage section="users" />,
+          },
+          {
+            path: "/settings/notifications",
+            element: <SettingsPlaceholderPage section="notifications" />,
+          },
+          {
+            path: "/settings/integrations",
+            element: <SettingsPlaceholderPage section="integrations" />,
+          },
+          {
+            path: "/settings/security",
+            element: <SettingsPlaceholderPage section="security" />,
+          },
+          {
+            path: "/settings/audit-log",
+            element: <SettingsPlaceholderPage section="audit-log" />,
+          },
         ],
       },
       { path: "*", element: <Navigate to="/" replace /> },

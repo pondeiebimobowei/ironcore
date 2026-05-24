@@ -11,6 +11,10 @@ export type AuthOrganization = {
   id: string;
   name: string;
   slug: string;
+  timezone: string;
+  dateFormat: string;
+  timeFormat: string;
+  currency: string;
 };
 
 export type AuthSession = {
@@ -45,6 +49,10 @@ export type OrganizationSetupInput = {
   state?: string;
   postalCode?: string;
   country?: string;
+  timezone?: string;
+  dateFormat?: string;
+  timeFormat?: string;
+  currency?: string;
   businessHours?: unknown[];
   closedOnPublicHolidays?: boolean;
   logoUrl?: string;

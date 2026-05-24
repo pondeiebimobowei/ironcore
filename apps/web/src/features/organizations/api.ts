@@ -18,6 +18,10 @@ export type OrganizationProfile = {
   state: string | null;
   postalCode: string | null;
   country: string | null;
+  timezone: string;
+  dateFormat: string;
+  timeFormat: string;
+  currency: string;
   businessHours: unknown[] | null;
   closedOnPublicHolidays: boolean;
   logoUrl: string | null;
@@ -42,6 +46,10 @@ export type UpdateOrganizationProfileInput = Partial<{
   state: string;
   postalCode: string;
   country: string;
+  timezone: string;
+  dateFormat: string;
+  timeFormat: string;
+  currency: string;
   businessHours: unknown[];
   closedOnPublicHolidays: boolean;
   logoUrl: string;

@@ -1,5 +1,9 @@
 import { Link } from "react-router-dom";
 import type { MemberSummary } from "../../features/members/types";
+import {
+  formatOrganizationCurrency,
+  useOrganizationFormatters,
+} from "../../lib/format/organization";
 
 const statusLabels: Record<string, string> = {
   ACTIVE: "Active",
@@ -12,14 +16,6 @@ const statusLabels: Record<string, string> = {
 
 function memberCode(memberId: string) {
   return `#MEM-${memberId.slice(-4).toUpperCase()}`;
-}
-
-function formatDate(date: string) {
-  return new Date(date).toLocaleDateString("en-NG", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
 }
 
 function expiryDetail(expiryDate?: string) {
@@ -46,6 +42,8 @@ function expiryDetail(expiryDate?: string) {
 }
 
 export function MemberTable({ members }: { members: MemberSummary[] }) {
+  const { formatDate } = useOrganizationFormatters();
+
   if (members.length === 0) {
     return <p className="empty-state">No members match the current filters.</p>;
   }
@@ -94,7 +92,10 @@ export function MemberTable({ members }: { members: MemberSummary[] }) {
                   {membership?.plan?.name ?? "Unassigned"}
                   <span>
                     {membership
-                      ? `${membership.currency}${membership.amount}`
+                      ? formatOrganizationCurrency(
+                          membership.amount,
+                          membership.currency,
+                        )
                       : "No active plan"}
                   </span>
                 </td>
@@ -113,7 +114,10 @@ export function MemberTable({ members }: { members: MemberSummary[] }) {
                   {payment ? formatDate(payment.submittedAt) : "No payment"}
                   <span>
                     {payment
-                      ? `${payment.amountPaid ?? payment.amountExpected}`
+                      ? formatOrganizationCurrency(
+                          payment.amountPaid ?? payment.amountExpected,
+                          membership?.currency,
+                        )
                       : "Awaiting first payment"}
                   </span>
                 </td>

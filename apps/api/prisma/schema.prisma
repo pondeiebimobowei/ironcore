@@ -160,6 +160,10 @@ model Organization {
   state                  String?
   postalCode             String?
   country                String?
+  timezone               String   @default("Africa/Lagos")
+  dateFormat             String   @default("MMM D, YYYY")
+  timeFormat             String   @default("12h")
+  currency               String   @default("NGN")
   businessHours          Json?
   closedOnPublicHolidays Boolean  @default(false)
   logoUrl                String?

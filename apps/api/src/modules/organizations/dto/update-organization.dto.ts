@@ -3,6 +3,7 @@ import {
   IsArray,
   IsBoolean,
   IsEmail,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -11,6 +12,35 @@ import {
   MinLength,
 } from 'class-validator';
 import { emptyStringToUndefined } from '../../members/dto/empty-string-to-undefined';
+
+export const ORGANIZATION_TIMEZONES = [
+  'Africa/Lagos',
+  'UTC',
+  'Europe/London',
+  'America/New_York',
+  'Africa/Accra',
+  'Africa/Nairobi',
+  'Africa/Johannesburg',
+] as const;
+
+export const ORGANIZATION_DATE_FORMATS = [
+  'MMM D, YYYY',
+  'DD/MM/YYYY',
+  'MM/DD/YYYY',
+  'YYYY-MM-DD',
+] as const;
+
+export const ORGANIZATION_TIME_FORMATS = ['12h', '24h'] as const;
+
+export const ORGANIZATION_CURRENCIES = [
+  'NGN',
+  'USD',
+  'GBP',
+  'EUR',
+  'GHS',
+  'KES',
+  'ZAR',
+] as const;
 
 export class UpdateOrganizationDto {
   @IsOptional()
@@ -88,6 +118,22 @@ export class UpdateOrganizationDto {
   @IsString()
   @Transform(emptyStringToUndefined)
   country?: string;
+
+  @IsOptional()
+  @IsIn(ORGANIZATION_TIMEZONES)
+  timezone?: string;
+
+  @IsOptional()
+  @IsIn(ORGANIZATION_DATE_FORMATS)
+  dateFormat?: string;
+
+  @IsOptional()
+  @IsIn(ORGANIZATION_TIME_FORMATS)
+  timeFormat?: string;
+
+  @IsOptional()
+  @IsIn(ORGANIZATION_CURRENCIES)
+  currency?: string;
 
   @IsOptional()
   @IsArray()

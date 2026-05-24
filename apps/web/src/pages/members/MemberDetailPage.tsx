@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getMember, updateMember } from "../../features/members/api";
 import type { MemberDetail, MemberStatus } from "../../features/members/types";
+import { useOrganizationFormatters } from "../../lib/format/organization";
 
 const statuses: MemberStatus[] = [
   "ACTIVE",
@@ -14,6 +15,8 @@ const statuses: MemberStatus[] = [
 
 export function MemberDetailPage() {
   const { memberId } = useParams();
+  const { formatCurrency, formatDate, formatDateTime } =
+    useOrganizationFormatters();
   const [member, setMember] = useState<MemberDetail | null>(null);
   const [error, setError] = useState("");
 
@@ -119,7 +122,7 @@ export function MemberDetailPage() {
                 <strong>{membership.plan?.name ?? "Unassigned plan"}</strong>
                 <span>
                   {membership.status} · expires{" "}
-                  {new Date(membership.expiryDate).toLocaleDateString()}
+                  {formatDate(membership.expiryDate)}
                 </span>
               </div>
             ))}
@@ -136,8 +139,10 @@ export function MemberDetailPage() {
               <div key={payment.id} className="line-item">
                 <strong>{payment.status.replaceAll("_", " ")}</strong>
                 <span>
-                  Expected {payment.amountExpected}
-                  {payment.amountPaid ? ` · paid ${payment.amountPaid}` : ""}
+                  Expected {formatCurrency(payment.amountExpected)}
+                  {payment.amountPaid
+                    ? ` · paid ${formatCurrency(payment.amountPaid)}`
+                    : ""}
                 </span>
               </div>
             ))}
@@ -161,32 +166,34 @@ export function MemberDetailPage() {
           {member.messageLogs.length === 0 ? (
             <section className="empty-state">
               <strong>No messages sent</strong>
-              <span>Mock WhatsApp sends will appear here after workflows run.</span>
+              <span>
+                Mock WhatsApp sends will appear here after workflows run.
+              </span>
             </section>
           ) : null}
           {member.messageLogs.map((message) => (
             <div key={message.id} className="line-item">
               <strong>{message.status.replaceAll("_", " ")}</strong>
-              <span>
-                {new Date(
-                  message.sentAt ?? message.createdAt,
-                ).toLocaleString()}
-              </span>
+              <span>{formatDateTime(message.sentAt ?? message.createdAt)}</span>
               <p>{message.content}</p>
-              {message.errorMessage ? <small>{message.errorMessage}</small> : null}
+              {message.errorMessage ? (
+                <small>{message.errorMessage}</small>
+              ) : null}
             </div>
           ))}
           <h2>Timeline</h2>
           {member.timelineEvents.length === 0 ? (
             <section className="empty-state">
               <strong>No timeline events</strong>
-              <span>Member, payment, and workflow events will appear here.</span>
+              <span>
+                Member, payment, and workflow events will appear here.
+              </span>
             </section>
           ) : null}
           {member.timelineEvents.map((event) => (
             <div key={event.id} className="line-item">
               <strong>{event.type.replaceAll("_", " ")}</strong>
-              <span>{new Date(event.createdAt).toLocaleString()}</span>
+              <span>{formatDateTime(event.createdAt)}</span>
             </div>
           ))}
         </aside>

@@ -12,6 +12,10 @@ export type AuthResponse = {
     id: string;
     name: string;
     slug: string;
+    timezone: string;
+    dateFormat: string;
+    timeFormat: string;
+    currency: string;
   } | null;
   onboardingRequired: boolean;
 };

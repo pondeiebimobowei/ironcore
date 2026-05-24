@@ -1,17 +1,37 @@
 import { Link } from "react-router-dom";
+import { type FormEvent, useEffect, useState } from "react";
 import { useAuth } from "../../lib/auth/AuthContext";
 import {
   generalSettings,
   settingsShortcuts,
-  settingsTabs,
 } from "../../features/organizations/settings";
+import {
+  getCurrentOrganization,
+  updateOrganizationProfile,
+} from "../../features/organizations/api";
 import { supportEmail, supportMailto } from "../../lib/support/contact";
+import { SettingsNavigation } from "./SettingsNavigation";
+
+type GeneralPreferences = {
+  timezone: string;
+  dateFormat: string;
+  timeFormat: string;
+  currency: string;
+};
+
+const defaultPreferences: GeneralPreferences = {
+  timezone: "Africa/Lagos",
+  dateFormat: "MMM D, YYYY",
+  timeFormat: "12h",
+  currency: "NGN",
+};
 
 const sideCards = [
   {
     title: "Notification Preferences",
     description: "Choose what notifications you want to receive and how.",
     action: "Manage Notifications",
+    path: "/settings/notifications",
     icon: "NT",
     tone: "blue",
   },
@@ -19,6 +39,7 @@ const sideCards = [
     title: "Integrations",
     description: "Connect IronCore Retain with your favorite tools.",
     action: "Manage Integrations",
+    path: "/settings/integrations",
     icon: "IN",
     tone: "green",
   },
@@ -26,13 +47,97 @@ const sideCards = [
     title: "Security",
     description: "Manage password, two-factor authentication and sessions.",
     action: "Manage Security",
+    path: "/settings/security",
     icon: "SC",
     tone: "yellow",
   },
 ];
 
 export function SettingsPage() {
-  const { organization } = useAuth();
+  const { organization, updateOrganization } = useAuth();
+  const [preferences, setPreferences] = useState<GeneralPreferences>({
+    timezone: organization?.timezone ?? defaultPreferences.timezone,
+    dateFormat: organization?.dateFormat ?? defaultPreferences.dateFormat,
+    timeFormat: organization?.timeFormat ?? defaultPreferences.timeFormat,
+    currency: organization?.currency ?? defaultPreferences.currency,
+  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+
+    getCurrentOrganization()
+      .then((currentOrganization) => {
+        if (!active) {
+          return;
+        }
+
+        setPreferences({
+          timezone: currentOrganization.timezone,
+          dateFormat: currentOrganization.dateFormat,
+          timeFormat: currentOrganization.timeFormat,
+          currency: currentOrganization.currency,
+        });
+        updateOrganization({
+          id: currentOrganization.id,
+          name: currentOrganization.name,
+          slug: currentOrganization.slug,
+          timezone: currentOrganization.timezone,
+          dateFormat: currentOrganization.dateFormat,
+          timeFormat: currentOrganization.timeFormat,
+          currency: currentOrganization.currency,
+        });
+        setError("");
+      })
+      .catch(() => {
+        if (active) {
+          setError("Could not load general settings.");
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [updateOrganization]);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setMessage("");
+    setError("");
+
+    try {
+      setIsSaving(true);
+      const currentOrganization = await updateOrganizationProfile(preferences);
+      setPreferences({
+        timezone: currentOrganization.timezone,
+        dateFormat: currentOrganization.dateFormat,
+        timeFormat: currentOrganization.timeFormat,
+        currency: currentOrganization.currency,
+      });
+      updateOrganization({
+        id: currentOrganization.id,
+        name: currentOrganization.name,
+        slug: currentOrganization.slug,
+        timezone: currentOrganization.timezone,
+        dateFormat: currentOrganization.dateFormat,
+        timeFormat: currentOrganization.timeFormat,
+        currency: currentOrganization.currency,
+      });
+      setMessage("General settings saved.");
+    } catch {
+      setError("Could not save general settings.");
+    } finally {
+      setIsSaving(false);
+    }
+  }
 
   return (
     <main className="page settings-page">
@@ -43,17 +148,7 @@ export function SettingsPage() {
         </div>
       </header>
 
-      <nav className="settings-tabs" aria-label="Settings sections">
-        {settingsTabs.map((tab) => (
-          <button
-            key={tab}
-            type="button"
-            className={tab === "General" ? "active" : undefined}
-          >
-            {tab}
-          </button>
-        ))}
-      </nav>
+      <SettingsNavigation currentLabel="General" />
 
       <section className="settings-shortcuts" aria-label="Settings shortcuts">
         {settingsShortcuts.map((shortcut) => (
@@ -67,26 +162,16 @@ export function SettingsPage() {
             <div>
               <h2>{shortcut.title}</h2>
               <p>{shortcut.description}</p>
-              {shortcut.title === "Gym Profile" ? (
-                <Link to="/settings/organization" className="secondary-button">
-                  {shortcut.action}
-                </Link>
-              ) : shortcut.title === "Billing & Plan" ? (
-                <Link to="/settings/billing" className="secondary-button">
-                  {shortcut.action}
-                </Link>
-              ) : (
-                <button type="button" className="secondary-button">
-                  {shortcut.action}
-                </button>
-              )}
+              <Link to={shortcut.path} className="secondary-button">
+                {shortcut.action}
+              </Link>
             </div>
           </article>
         ))}
       </section>
 
       <div className="settings-layout">
-        <section className="settings-panel">
+        <form className="settings-panel" onSubmit={handleSubmit}>
           <header>
             <h2>General Settings</h2>
             <p>{organization?.name ?? "Your gym"} workspace defaults.</p>
@@ -104,23 +189,47 @@ export function SettingsPage() {
                   <strong>{setting.label}</strong>
                   <span>{setting.description}</span>
                 </div>
-                {setting.action ? (
-                  <button type="button" className="secondary-button">
-                    {setting.action}
-                  </button>
-                ) : (
-                  <select defaultValue={setting.value} aria-label={setting.label}>
-                    <option>{setting.value}</option>
-                  </select>
-                )}
+                <select
+                  aria-label={setting.label}
+                  disabled={isLoading || isSaving}
+                  value={preferences[setting.field]}
+                  onChange={(event) =>
+                    setPreferences((current) => ({
+                      ...current,
+                      [setting.field]: event.target.value,
+                    }))
+                  }
+                >
+                  {setting.options.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
               </div>
             ))}
           </div>
-        </section>
+          <div className="settings-save-bar">
+            <div>
+              {message ? <p className="success-text">{message}</p> : null}
+              {error ? (
+                <p className="danger-text" role="alert">
+                  {error}
+                </p>
+              ) : null}
+            </div>
+            <button type="submit" disabled={isLoading || isSaving}>
+              {isSaving ? "Saving..." : "Save Settings"}
+            </button>
+          </div>
+        </form>
 
         <aside className="settings-side" aria-label="Additional settings">
           {sideCards.map((card) => (
-            <article className="settings-card settings-side-card" key={card.title}>
+            <article
+              className="settings-card settings-side-card"
+              key={card.title}
+            >
               <span
                 className={`settings-icon settings-icon-${card.tone}`}
                 aria-hidden="true"
@@ -130,9 +239,9 @@ export function SettingsPage() {
               <div>
                 <h2>{card.title}</h2>
                 <p>{card.description}</p>
-                <button type="button" className="secondary-button">
+                <Link to={card.path} className="secondary-button">
                   {card.action}
-                </button>
+                </Link>
               </div>
             </article>
           ))}

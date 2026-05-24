@@ -9,10 +9,13 @@ import {
 import type { Payment } from "../../features/payments/types";
 
 import { useAuth } from "../../lib/auth/AuthContext";
+import { useOrganizationFormatters } from "../../lib/format/organization";
 import { captureEvent } from "../../lib/posthog/posthog";
 
 export function PaymentDetailPage() {
   const { organization, user } = useAuth();
+  const { formatCurrency, formatDate, formatDateTime } =
+    useOrganizationFormatters();
   const { paymentId } = useParams();
   const [payment, setPayment] = useState<Payment | null>(null);
   const [error, setError] = useState("");
@@ -99,7 +102,7 @@ export function PaymentDetailPage() {
             {payment.member.firstName} {payment.member.lastName}
           </h1>
           <p>
-            Submitted {new Date(payment.submittedAt).toLocaleString()}
+            Submitted {formatDateTime(payment.submittedAt)}
             {payment.reference ? ` · ${payment.reference}` : ""}
           </p>
         </div>
@@ -109,19 +112,23 @@ export function PaymentDetailPage() {
           <section>
             <h2>Payment</h2>
             <div className="line-item">
-              <strong>{payment.amountPaid ?? payment.amountExpected}</strong>
+              <strong>
+                {formatCurrency(payment.amountPaid ?? payment.amountExpected)}
+              </strong>
               <span>
-                Expected {payment.amountExpected} ·{" "}
+                Expected {formatCurrency(payment.amountExpected)} ·{" "}
                 {payment.method.replaceAll("_", " ")}
               </span>
             </div>
             <div className="line-item">
-              <strong>{payment.membership?.plan?.name ?? "Unassigned plan"}</strong>
+              <strong>
+                {payment.membership?.plan?.name ?? "Unassigned plan"}
+              </strong>
               <span>
                 {payment.membership
-                  ? `Membership expires ${new Date(
+                  ? `Membership expires ${formatDate(
                       payment.membership.expiryDate,
-                    ).toLocaleDateString()}`
+                    )}`
                   : "No membership attached"}
               </span>
             </div>

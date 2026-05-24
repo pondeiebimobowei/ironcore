@@ -1,4 +1,5 @@
 import type { Payment } from "../../features/payments/types";
+import { useOrganizationFormatters } from "../../lib/format/organization";
 import { ApprovePaymentButton } from "./ApprovePaymentButton";
 import { PaymentStatusBadge } from "./PaymentStatusBadge";
 import { ProofPreview } from "./ProofPreview";
@@ -15,17 +16,24 @@ export function PaymentVerificationPanel({
   onApprove,
   onReject,
 }: PaymentVerificationPanelProps) {
+  const { formatCurrency } = useOrganizationFormatters();
+
   return (
     <aside className="side-panel">
       <h2>Verification</h2>
       <div className="line-item">
-        <strong>{payment.member.firstName} {payment.member.lastName}</strong>
+        <strong>
+          {payment.member.firstName} {payment.member.lastName}
+        </strong>
         <span>{payment.member.phoneNumber}</span>
       </div>
       <div className="line-item">
-        <strong>{payment.amountPaid ?? payment.amountExpected}</strong>
+        <strong>
+          {formatCurrency(payment.amountPaid ?? payment.amountExpected)}
+        </strong>
         <span>
-          Expected {payment.amountExpected} · {payment.method.replaceAll("_", " ")}
+          Expected {formatCurrency(payment.amountExpected)} ·{" "}
+          {payment.method.replaceAll("_", " ")}
         </span>
       </div>
       <div className="line-item">

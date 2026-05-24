@@ -3,18 +3,14 @@ import { Link } from "react-router-dom";
 import { PaymentTable } from "../../components/payments";
 import { listPayments } from "../../features/payments/api";
 import type { Payment } from "../../features/payments/types";
-
-function formatCurrency(value: number) {
-  return `₦${new Intl.NumberFormat("en-NG", {
-    maximumFractionDigits: 0,
-  }).format(value)}`;
-}
+import { useOrganizationFormatters } from "../../lib/format/organization";
 
 function paymentAmount(payment: Payment) {
   return Number(payment.amountPaid ?? payment.amountExpected);
 }
 
 export function PaymentsPage() {
+  const { currency, formatCurrency } = useOrganizationFormatters();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -96,7 +92,9 @@ export function PaymentsPage() {
       </header>
       <section className="payment-metric-grid">
         <article className="payment-metric-card">
-          <span className="settings-icon settings-icon-success">₦</span>
+          <span className="settings-icon settings-icon-success">
+            {currency}
+          </span>
           <div>
             <small>Total Collected</small>
             <strong>{formatCurrency(totalCollected)}</strong>
@@ -213,7 +211,8 @@ export function PaymentsPage() {
                     </span>
                     <span>
                       <strong>
-                        Payment {payment.status.replaceAll("_", " ").toLowerCase()}
+                        Payment{" "}
+                        {payment.status.replaceAll("_", " ").toLowerCase()}
                       </strong>
                       <small>
                         {payment.member.firstName} {payment.member.lastName}

@@ -1,11 +1,8 @@
 import { Link } from "react-router-dom";
-import {
-  billingTabs,
-  recentInvoices,
-  usageItems,
-} from "../../features/organizations/billing";
+import { recentInvoices, usageItems } from "../../features/organizations/billing";
 import { useAuth } from "../../lib/auth/AuthContext";
 import { supportMailto } from "../../lib/support/contact";
+import { SettingsNavigation } from "./SettingsNavigation";
 
 export function BillingPage() {
   const { organization } = useAuth();
@@ -24,17 +21,7 @@ export function BillingPage() {
         </div>
       </header>
 
-      <nav className="settings-tabs" aria-label="Billing sections">
-        {billingTabs.map((tab) => (
-          <button
-            key={tab}
-            type="button"
-            className={tab === "Overview" ? "active" : undefined}
-          >
-            {tab}
-          </button>
-        ))}
-      </nav>
+      <SettingsNavigation currentLabel="Billing & Plan" />
 
       <section className="billing-plan-card">
         <span className="settings-icon settings-icon-success" aria-hidden="true">

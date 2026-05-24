@@ -6,14 +6,7 @@ import {
   updateOrganizationProfile,
 } from "../../features/organizations/api";
 import { useAuth } from "../../lib/auth/AuthContext";
-
-const tabs = [
-  "Overview",
-  "Business Details",
-  "Branding",
-  "Contact Person",
-  "Social & Links",
-];
+import { SettingsNavigation } from "./SettingsNavigation";
 
 type BusinessHour = {
   label: string;
@@ -103,6 +96,10 @@ export function OrganizationProfilePage() {
             id: organization.id,
             name: organization.name,
             slug: organization.slug,
+            timezone: organization.timezone,
+            dateFormat: organization.dateFormat,
+            timeFormat: organization.timeFormat,
+            currency: organization.currency,
           });
           setError("");
         }
@@ -162,6 +159,10 @@ export function OrganizationProfilePage() {
         id: organization.id,
         name: organization.name,
         slug: organization.slug,
+        timezone: organization.timezone,
+        dateFormat: organization.dateFormat,
+        timeFormat: organization.timeFormat,
+        currency: organization.currency,
       });
       setOrganizationName(organization.name);
       setMessage("Organization profile saved.");
@@ -188,17 +189,7 @@ export function OrganizationProfilePage() {
         </button>
       </header>
 
-      <nav className="settings-tabs" aria-label="Organisation profile sections">
-        {tabs.map((tab) => (
-          <button
-            key={tab}
-            type="button"
-            className={tab === "Overview" ? "active" : undefined}
-          >
-            {tab}
-          </button>
-        ))}
-      </nav>
+      <SettingsNavigation currentLabel="Organisation" />
 
       {isLoading ? (
         <section className="dashboard-state">

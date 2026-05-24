@@ -52,6 +52,11 @@ npm run preview --workspace=apps/web
 /settings
 /settings/organization
 /settings/billing
+/settings/users
+/settings/notifications
+/settings/integrations
+/settings/security
+/settings/audit-log
 ```
 
 All product routes are protected by `ProtectedRoute`.

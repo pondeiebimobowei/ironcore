@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { listTasks, updateTask } from "../../features/tasks/api";
 import type { Task, TaskStatus, TaskType } from "../../features/tasks/types";
 import { useAuth } from "../../lib/auth/AuthContext";
+import { useOrganizationFormatters } from "../../lib/format/organization";
 import {
   taskPriorityLabels,
   taskTypeDescriptions,
@@ -25,20 +26,6 @@ const statusLabels: Record<TaskStatus, string> = {
   COMPLETED: "Completed",
   CANCELLED: "Cancelled",
 };
-
-function formatDate(value?: string | null) {
-  if (!value) {
-    return "No due date";
-  }
-
-  return new Intl.DateTimeFormat("en", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(new Date(value));
-}
 
 function memberName(member: { firstName: string; lastName?: string | null }) {
   return [member.firstName, member.lastName].filter(Boolean).join(" ");
@@ -81,6 +68,7 @@ function dueTone(task: Task) {
 
 export function TasksPage() {
   const { user } = useAuth();
+  const { formatDateTime } = useOrganizationFormatters();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [status, setStatus] = useState<TaskFilter>("ALL");
   const [type, setType] = useState<TaskType | "ALL">("ALL");
@@ -333,7 +321,9 @@ export function TasksPage() {
                         </td>
                         <td>
                           <span className={`due-pill due-${dueTone(task)}`}>
-                            {formatDate(task.dueDate)}
+                            {task.dueDate
+                              ? formatDateTime(task.dueDate)
+                              : "No due date"}
                           </span>
                         </td>
                         <td>

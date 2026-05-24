@@ -2,19 +2,11 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { getPayment } from "../../features/payments/api";
 import type { Payment } from "../../features/payments/types";
+import { useOrganizationFormatters } from "../../lib/format/organization";
 
 type SuccessLocationState = {
   payment?: Payment;
 };
-
-function formatCurrency(value: string | number | undefined | null) {
-  const amount = Number(value ?? 0);
-
-  return `₦${new Intl.NumberFormat("en-NG", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(Number.isFinite(amount) ? amount : 0)}`;
-}
 
 function memberName(payment: Payment) {
   return [payment.member.firstName, payment.member.lastName]
@@ -25,8 +17,11 @@ function memberName(payment: Payment) {
 export function RecordPaymentSuccessPage() {
   const { paymentId } = useParams();
   const location = useLocation();
+  const { formatCurrency, formatDateTime } = useOrganizationFormatters();
   const state = location.state as SuccessLocationState | null;
-  const [payment, setPayment] = useState<Payment | null>(state?.payment ?? null);
+  const [payment, setPayment] = useState<Payment | null>(
+    state?.payment ?? null,
+  );
   const [isLoading, setIsLoading] = useState(!state?.payment);
   const [error, setError] = useState("");
 
@@ -111,15 +106,19 @@ export function RecordPaymentSuccessPage() {
             </div>
             <div>
               <span>Amount Paid</span>
-              <strong className="success-text">{formatCurrency(amountPaid)}</strong>
+              <strong className="success-text">
+                {formatCurrency(amountPaid)}
+              </strong>
             </div>
             <div>
               <span>Payment Date</span>
-              <strong>{new Date(payment.submittedAt).toLocaleString()}</strong>
+              <strong>{formatDateTime(payment.submittedAt)}</strong>
             </div>
             <div>
               <span>Amount Applied</span>
-              <strong className="success-text">{formatCurrency(amountPaid)}</strong>
+              <strong className="success-text">
+                {formatCurrency(amountPaid)}
+              </strong>
             </div>
             <div>
               <span>Payment Method</span>
@@ -153,10 +152,16 @@ export function RecordPaymentSuccessPage() {
             </div>
             <div className="billing-total">
               <dt>Remaining Balance</dt>
-              <dd>{formatCurrency(Number(payment.amountExpected) - Number(amountPaid))}</dd>
+              <dd>
+                {formatCurrency(
+                  Number(payment.amountExpected) - Number(amountPaid),
+                )}
+              </dd>
             </div>
           </dl>
-          <span className="success-pill">Account is queued for verification</span>
+          <span className="success-pill">
+            Account is queued for verification
+          </span>
         </aside>
       </section>
 

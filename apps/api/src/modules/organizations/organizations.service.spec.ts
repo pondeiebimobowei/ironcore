@@ -66,6 +66,10 @@ describe('OrganizationsService', () => {
         businessType: 'Commercial Gym',
         organizationSize: '6-20',
         contactEmail: 'hello@example.com',
+        timezone: 'Africa/Lagos',
+        dateFormat: 'MMM D, YYYY',
+        timeFormat: '12h',
+        currency: 'NGN',
         businessHours: [{ day: 'Monday', open: '08:00', close: '18:00' }],
       });
     tx.organization.create.mockResolvedValue(createdOrganization);
@@ -76,6 +80,10 @@ describe('OrganizationsService', () => {
         businessType: 'Commercial Gym',
         organizationSize: '6-20',
         contactEmail: 'hello@example.com',
+        timezone: 'Africa/Lagos',
+        dateFormat: 'MMM D, YYYY',
+        timeFormat: '12h',
+        currency: 'NGN',
         businessHours: [{ day: 'Monday', open: '08:00', close: '18:00' }],
       }),
     ).resolves.toMatchObject({
@@ -92,6 +100,7 @@ describe('OrganizationsService', () => {
         businessType: 'Commercial Gym',
         organizationSize: '6-20',
         contactEmail: 'hello@example.com',
+        currency: 'NGN',
         businessHours: [
           { day: 'Monday', open: '08:00', close: '18:00' },
         ] as Prisma.InputJsonValue,
@@ -142,6 +151,10 @@ describe('OrganizationsService', () => {
         logoUrl: 'https://example.com/logo.png',
         imageUrls: ['https://example.com/photo.png'],
         closedOnPublicHolidays: true,
+        timezone: 'Europe/London',
+        dateFormat: 'DD/MM/YYYY',
+        timeFormat: '24h',
+        currency: 'GBP',
       });
     prisma.organization.update.mockResolvedValue({ id: 'org-1' });
 
@@ -152,6 +165,10 @@ describe('OrganizationsService', () => {
         logoUrl: 'https://example.com/logo.png',
         imageUrls: ['https://example.com/photo.png'],
         closedOnPublicHolidays: true,
+        timezone: 'Europe/London',
+        dateFormat: 'DD/MM/YYYY',
+        timeFormat: '24h',
+        currency: 'GBP',
       }),
     ).resolves.toMatchObject({
       name: 'Peak Performance Club',
@@ -168,6 +185,7 @@ describe('OrganizationsService', () => {
         tagline: 'Recover overdue revenue',
         logoUrl: 'https://example.com/logo.png',
         imageUrls: ['https://example.com/photo.png'],
+        currency: 'GBP',
         closedOnPublicHolidays: true,
       }),
     });

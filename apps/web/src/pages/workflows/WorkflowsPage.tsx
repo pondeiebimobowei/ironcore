@@ -8,6 +8,7 @@ import type {
   WorkflowDefinition,
   WorkflowDefinitionStatus,
 } from "../../features/workflows/types";
+import { useOrganizationFormatters } from "../../lib/format/organization";
 
 type WorkflowTab = "ALL" | WorkflowDefinitionStatus;
 
@@ -18,7 +19,10 @@ const tabs: Array<{ label: string; value: WorkflowTab }> = [
   { label: "Drafts", value: "DRAFT" },
 ];
 
-const categoryTone: Record<string, "green" | "orange" | "purple" | "blue" | "pink" | "slate"> = {
+const categoryTone: Record<
+  string,
+  "green" | "orange" | "purple" | "blue" | "pink" | "slate"
+> = {
   Renewal: "green",
   Overdue: "orange",
   Reactivation: "purple",
@@ -31,20 +35,6 @@ const categoryTone: Record<string, "green" | "orange" | "purple" | "blue" | "pin
   Upsell: "orange",
   Growth: "blue",
 };
-
-function formatDateTime(value: string | null) {
-  if (!value) {
-    return "-";
-  }
-
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(new Date(value));
-}
 
 function formatDay(dayOffset: number) {
   if (dayOffset === 0) {
@@ -83,6 +73,7 @@ function workflowIcon(workflow: WorkflowDefinition) {
 }
 
 export function WorkflowsPage() {
+  const { formatDateTime } = useOrganizationFormatters();
   const [workflows, setWorkflows] = useState<WorkflowDefinition[]>([]);
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | null>(
     null,
@@ -202,7 +193,10 @@ export function WorkflowsPage() {
                 revenue.
               </p>
             </div>
-            <Link className="button-link workflow-new-button" to="/workflows/new">
+            <Link
+              className="button-link workflow-new-button"
+              to="/workflows/new"
+            >
               <span aria-hidden="true">+</span>
               New Workflow
             </Link>
@@ -248,7 +242,9 @@ export function WorkflowsPage() {
               <span>Status</span>
               <select
                 value={statusFilter}
-                onChange={(event) => setStatusFilter(event.target.value as WorkflowTab)}
+                onChange={(event) =>
+                  setStatusFilter(event.target.value as WorkflowTab)
+                }
               >
                 <option value="ALL">All Statuses</option>
                 <option value="ACTIVE">Active</option>
@@ -338,7 +334,9 @@ export function WorkflowsPage() {
                     </b>
                   </span>
                   <span>
-                    <b className={`status-pill status-${workflow.status.toLowerCase()}`}>
+                    <b
+                      className={`status-pill status-${workflow.status.toLowerCase()}`}
+                    >
                       {statusLabel(workflow.status)}
                     </b>
                   </span>
@@ -346,7 +344,9 @@ export function WorkflowsPage() {
                     <>
                       <span>{formatDateTime(workflow.lastEditedAt)}</span>
                       <span className="workflow-editor-cell">
-                        <strong>{workflow.editedBy?.fullName ?? "Unassigned"}</strong>
+                        <strong>
+                          {workflow.editedBy?.fullName ?? "Unassigned"}
+                        </strong>
                         <small>{roleLabel(workflow.editedBy?.role)}</small>
                       </span>
                       <span />
@@ -396,13 +396,17 @@ export function WorkflowsPage() {
                   <button type="button">Edit</button>
                 </header>
                 <div className="selected-workflow-title">
-                  <span className={`workflow-icon ${workflowTone(selectedWorkflow)}`}>
+                  <span
+                    className={`workflow-icon ${workflowTone(selectedWorkflow)}`}
+                  >
                     {workflowIcon(selectedWorkflow)}
                   </span>
                   <div>
                     <h3>{selectedWorkflow.name}</h3>
                     <p>
-                      <b className={`status-pill status-${selectedWorkflow.status.toLowerCase()}`}>
+                      <b
+                        className={`status-pill status-${selectedWorkflow.status.toLowerCase()}`}
+                      >
                         {statusLabel(selectedWorkflow.status)}
                       </b>
                       <span>
@@ -556,7 +560,9 @@ function DraftTipsCard() {
           <span className="summary-icon green">A</span>
           <div>
             <strong>Activate when ready</strong>
-            <p>Once published, your workflow will start running automatically.</p>
+            <p>
+              Once published, your workflow will start running automatically.
+            </p>
           </div>
         </article>
       </div>

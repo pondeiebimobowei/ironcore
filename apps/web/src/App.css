@@ -2768,6 +2768,82 @@ button.auth-primary-action:hover:not(:disabled) {
   margin-bottom: 18px;
 }
 
+.settings-navigation {
+  margin-bottom: 24px;
+}
+
+.settings-section-nav {
+  overflow-x: auto;
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid #d8dde6;
+}
+
+.settings-section-nav a {
+  flex: 0 0 auto;
+  border-bottom: 2px solid transparent;
+  color: #24324a;
+  padding: 0 14px 14px;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.settings-section-nav a.active {
+  border-bottom-color: #ef4444;
+  color: #0f172a;
+}
+
+.settings-mobile-menu {
+  display: none;
+  border: 1px solid #d8dde6;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.settings-mobile-menu summary {
+  display: flex;
+  cursor: pointer;
+  list-style: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.settings-mobile-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.settings-mobile-menu summary strong {
+  color: #ef4444;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.settings-mobile-menu nav {
+  display: grid;
+  border-top: 1px solid #edf2f7;
+  padding: 8px;
+}
+
+.settings-mobile-menu a {
+  border-radius: 6px;
+  color: #24324a;
+  padding: 11px 12px;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.settings-mobile-menu a.active {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
 .settings-tabs {
   overflow-x: auto;
   display: flex;
@@ -2919,6 +2995,21 @@ button.auth-primary-action:hover:not(:disabled) {
   justify-self: end;
 }
 
+.settings-save-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-top: 1px solid #edf2f7;
+  padding: 16px 20px;
+}
+
+.settings-save-bar p {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+
 .settings-export .secondary-button,
 .compact-billing-card .secondary-button {
   display: inline-flex;
@@ -2933,6 +3024,16 @@ button.auth-primary-action:hover:not(:disabled) {
 
 .settings-side-card {
   min-height: 118px;
+}
+
+.settings-placeholder-panel header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.settings-placeholder-row {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .settings-export {
@@ -4881,6 +4982,7 @@ select[aria-invalid="true"],
 
   .settings-row select,
   .settings-row button,
+  .settings-save-bar button,
   .settings-export button,
   .billing-plan-card > button,
   .usage-panel header button,
@@ -4889,6 +4991,11 @@ select[aria-invalid="true"],
   .profile-save-bar button {
     justify-self: stretch;
     width: 100%;
+  }
+
+  .settings-save-bar {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .billing-plan-stat,
@@ -5165,8 +5272,20 @@ select[aria-invalid="true"],
     padding-left: 14px;
   }
 
+  .settings-section-nav {
+    display: none;
+  }
+
+  .settings-mobile-menu {
+    display: block;
+  }
+
   .settings-card {
     grid-template-columns: 1fr;
+  }
+
+  .settings-placeholder-panel header {
+    align-items: flex-start;
   }
 
   .workflow-dashboard-layout,

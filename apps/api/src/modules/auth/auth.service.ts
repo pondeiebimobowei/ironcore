@@ -189,6 +189,10 @@ export class AuthService {
       id: string;
       name: string;
       slug: string;
+      timezone: string;
+      dateFormat: string;
+      timeFormat: string;
+      currency: string;
     } | null,
   ): Promise<AuthSession> {
     const payload: JwtPayload = {
@@ -229,6 +233,10 @@ export class AuthService {
             id: organization.id,
             name: organization.name,
             slug: organization.slug,
+            timezone: organization.timezone,
+            dateFormat: organization.dateFormat,
+            timeFormat: organization.timeFormat,
+            currency: organization.currency,
           }
         : null,
       onboardingRequired: !organization,
@@ -244,6 +252,10 @@ export class AuthService {
         id: string;
         name: string;
         slug: string;
+        timezone: string;
+        dateFormat: string;
+        timeFormat: string;
+        currency: string;
       };
     },
   >(memberships: T[]) {
