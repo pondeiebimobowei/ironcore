@@ -28,6 +28,16 @@ export function validateImportRows(
       });
     }
 
+    if (
+      row.membershipAmount &&
+      !/^\d+(\.\d{1,2})?$/.test(row.membershipAmount.trim())
+    ) {
+      errors.push({
+        row: rowNumber,
+        message: "Membership amount must be a number with up to 2 decimals.",
+      });
+    }
+
     seenPhones.add(row.phoneNumber);
   });
 

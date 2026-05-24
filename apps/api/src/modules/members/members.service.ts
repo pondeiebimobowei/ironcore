@@ -6,6 +6,7 @@ import {
 import {
   MemberStatus,
   MembershipStatus,
+  Prisma,
   TimelineEventType,
 } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
@@ -41,6 +42,11 @@ type ImportReportRow = {
   row: number;
   data: ImportMemberRowDto;
   issues: ImportIssue[];
+};
+
+type ImportMembershipResult = {
+  memberId: string;
+  membershipId: string;
 };
 
 @Injectable()
@@ -238,21 +244,49 @@ export class MembersService {
       return { createdCount: 0, errors: [...errors, ...warningErrors] };
     }
 
-    const createdMembers = await this.prisma.$transaction(
-      validRows.map((row) =>
-        this.prisma.member.create({
-          data: this.memberCreateData(organizationId, row),
-        }),
-      ),
-    );
-
-    await this.prisma.timelineEvent.createMany({
-      data: createdMembers.map((member) => ({
+    const createdMembers = await this.prisma.$transaction(async (tx) => {
+      const organizationCurrency = await this.organizationCurrency(
         organizationId,
-        memberId: member.id,
-        type: TimelineEventType.MEMBER_CREATED,
-        metadata: { source: 'csv_import' },
-      })),
+        tx,
+      );
+      const members = await Promise.all(
+        validRows.map((row) =>
+          tx.member.create({
+            data: this.memberCreateData(organizationId, row),
+          }),
+        ),
+      );
+      const memberships = await this.createImportedMemberships(
+        tx,
+        organizationId,
+        organizationCurrency,
+        validRows.map((row, index) => ({
+          row,
+          memberId: members[index].id,
+        })),
+      );
+
+      await tx.timelineEvent.createMany({
+        data: [
+          ...members.map((member) => ({
+            organizationId,
+            memberId: member.id,
+            type: TimelineEventType.MEMBER_CREATED,
+            metadata: { source: 'csv_import' },
+          })),
+          ...memberships.map((membership) => ({
+            organizationId,
+            memberId: membership.memberId,
+            type: TimelineEventType.MEMBERSHIP_CREATED,
+            metadata: {
+              membershipId: membership.membershipId,
+              source: 'csv_import',
+            },
+          })),
+        ],
+      });
+
+      return members;
     });
 
     return { createdCount: createdMembers.length, errors: [] };
@@ -343,6 +377,10 @@ export class MembersService {
     }
 
     const result = await this.prisma.$transaction(async (tx) => {
+      const organizationCurrency = await this.organizationCurrency(
+        organizationId,
+        tx,
+      );
       const createdMembers = await Promise.all(
         createRows.map((row) =>
           tx.member.create({
@@ -365,6 +403,18 @@ export class MembersService {
           }),
         ),
       );
+      const memberships = await this.createImportedMemberships(
+        tx,
+        organizationId,
+        organizationCurrency,
+        [
+          ...createRows.map((row, index) => ({
+            row,
+            memberId: createdMembers[index].id,
+          })),
+          ...updateRows.map(({ row, memberId }) => ({ row, memberId })),
+        ],
+      );
 
       await tx.timelineEvent.createMany({
         data: [
@@ -379,6 +429,15 @@ export class MembersService {
             memberId: member.id,
             type: TimelineEventType.MEMBER_UPDATED,
             metadata: { source: 'csv_import_duplicate_resolution' },
+          })),
+          ...memberships.map((membership) => ({
+            organizationId,
+            memberId: membership.memberId,
+            type: TimelineEventType.MEMBERSHIP_CREATED,
+            metadata: {
+              membershipId: membership.membershipId,
+              source: 'csv_import',
+            },
           })),
         ],
       });
@@ -404,8 +463,11 @@ export class MembersService {
     }
   }
 
-  private async organizationCurrency(organizationId: string) {
-    const organization = await this.prisma.organization.findUnique({
+  private async organizationCurrency(
+    organizationId: string,
+    tx: Prisma.TransactionClient | PrismaService = this.prisma,
+  ) {
+    const organization = await tx.organization.findUnique({
       where: { id: organizationId },
       select: { currency: true },
     });
@@ -559,5 +621,83 @@ export class MembersService {
       email: this.optionalTrim(row.email),
       notes: this.optionalTrim(row.notes),
     };
+  }
+
+  private async createImportedMemberships(
+    tx: Prisma.TransactionClient,
+    organizationId: string,
+    organizationCurrency: string,
+    rows: Array<{ row: ImportMemberRowDto; memberId: string }>,
+  ): Promise<ImportMembershipResult[]> {
+    const results: ImportMembershipResult[] = [];
+
+    for (const { row, memberId } of rows) {
+      if (!row.expiryDate) {
+        continue;
+      }
+
+      const planName = this.optionalTrim(row.planName);
+      const amount = this.optionalTrim(row.membershipAmount);
+      const plan = planName
+        ? await this.findOrCreateImportPlan(
+            tx,
+            organizationId,
+            planName,
+            amount ?? '0',
+            organizationCurrency,
+          )
+        : null;
+      const expiryDate = new Date(row.expiryDate);
+      const startDate = row.startDate
+        ? new Date(row.startDate)
+        : this.defaultMembershipStartDate(expiryDate);
+      const membership = await tx.membership.create({
+        data: {
+          organizationId,
+          memberId,
+          planId: plan?.id,
+          startDate,
+          expiryDate,
+          status: MembershipStatus.ACTIVE,
+          amount: amount ?? plan?.amount ?? '0',
+          currency: plan?.currency ?? organizationCurrency,
+        },
+      });
+
+      results.push({ memberId, membershipId: membership.id });
+    }
+
+    return results;
+  }
+
+  private async findOrCreateImportPlan(
+    tx: Prisma.TransactionClient,
+    organizationId: string,
+    name: string,
+    amount: string,
+    currency: string,
+  ) {
+    const existingPlan = await tx.plan.findFirst({
+      where: { organizationId, name },
+    });
+
+    if (existingPlan) {
+      return existingPlan;
+    }
+
+    return tx.plan.create({
+      data: {
+        organizationId,
+        name,
+        amount,
+        currency,
+      },
+    });
+  }
+
+  private defaultMembershipStartDate(expiryDate: Date) {
+    const startDate = new Date(expiryDate);
+    startDate.setDate(startDate.getDate() - 30);
+    return startDate;
   }
 }

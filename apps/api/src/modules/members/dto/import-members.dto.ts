@@ -6,6 +6,7 @@ import {
   IsEnum,
   IsInt,
   IsOptional,
+  Matches,
   IsString,
   MinLength,
   Min,
@@ -31,6 +32,21 @@ export class ImportMemberRowDto {
   @IsEmail()
   @Transform(emptyStringToUndefined)
   email?: string;
+
+  @IsOptional()
+  @IsDateString()
+  @Transform(emptyStringToUndefined)
+  startDate?: string;
+
+  @IsOptional()
+  @IsString()
+  @Transform(emptyStringToUndefined)
+  planName?: string;
+
+  @IsOptional()
+  @Matches(/^\d+(\.\d{1,2})?$/)
+  @Transform(emptyStringToUndefined)
+  membershipAmount?: string;
 
   @IsOptional()
   @IsDateString()

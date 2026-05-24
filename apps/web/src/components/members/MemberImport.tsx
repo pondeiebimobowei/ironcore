@@ -22,7 +22,15 @@ type ImportStep = "upload" | "map" | "review" | "importing" | "complete";
 type ReviewTab = "ready" | "resolution" | "failed";
 type MemberField = keyof Pick<
   MemberFormInput,
-  "firstName" | "lastName" | "phoneNumber" | "email" | "expiryDate" | "notes"
+  | "firstName"
+  | "lastName"
+  | "phoneNumber"
+  | "email"
+  | "planName"
+  | "membershipAmount"
+  | "startDate"
+  | "expiryDate"
+  | "notes"
 >;
 
 const memberFields: Array<{
@@ -34,8 +42,35 @@ const memberFields: Array<{
   { value: "lastName", label: "Last name" },
   { value: "phoneNumber", label: "Phone number", required: true },
   { value: "email", label: "Email" },
+  { value: "planName", label: "Plan name" },
+  { value: "membershipAmount", label: "Membership amount" },
+  { value: "startDate", label: "Start date" },
   { value: "expiryDate", label: "Expiry date" },
   { value: "notes", label: "Notes" },
+];
+
+const templateHeaders = [
+  "firstName",
+  "lastName",
+  "phoneNumber",
+  "email",
+  "planName",
+  "membershipAmount",
+  "startDate",
+  "expiryDate",
+  "notes",
+];
+
+const templateExample = [
+  "Ada",
+  "Lovelace",
+  "+2348012345678",
+  "ada@example.com",
+  "Monthly",
+  "25000",
+  "2026-05-01",
+  "2026-06-01",
+  "Imported from member list",
 ];
 
 const emptyReport: ImportDryRunResult = {
@@ -63,6 +98,16 @@ function guessField(header: string): MemberField | "" {
     mobilenumber: "phoneNumber",
     email: "email",
     emailaddress: "email",
+    plan: "planName",
+    planname: "planName",
+    membershipplan: "planName",
+    amount: "membershipAmount",
+    membershipamount: "membershipAmount",
+    fee: "membershipAmount",
+    price: "membershipAmount",
+    start: "startDate",
+    startdate: "startDate",
+    membershipstart: "startDate",
     expiry: "expiryDate",
     expirydate: "expiryDate",
     membershipexpiry: "expiryDate",
@@ -104,6 +149,17 @@ function formatBytes(size: number) {
 
 function csvRow(row: number) {
   return row + 1;
+}
+
+function downloadTemplate() {
+  const csv = `${templateHeaders.join(",")}\n${templateExample.join(",")}\n`;
+  const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = "ironcore-member-import-template.csv";
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 export function MemberImport({
@@ -150,7 +206,10 @@ export function MemberImport({
             return;
           }
 
-          row[field] = field === "expiryDate" ? normalizeDate(value) : value;
+          row[field] =
+            field === "expiryDate" || field === "startDate"
+              ? normalizeDate(value)
+              : value;
         });
 
         return row;
@@ -311,10 +370,16 @@ export function MemberImport({
         <div className="import-grid">
           <section className="import-card">
             <h3>1. Upload CSV file</h3>
+            <button type="button" onClick={downloadTemplate}>
+              Download CSV template
+            </button>
             <label className="import-dropzone">
               <span>Choose CSV file</span>
               <strong>Drag and drop or select a CSV export</strong>
-              <small>Required columns can be mapped on the next screen.</small>
+              <small>
+                Map name, phone, plan, amount, start date, and expiry date on
+                the next screen.
+              </small>
               <input type="file" accept=".csv,text/csv" onChange={handleFile} />
             </label>
             {errors.length > 0 ? <ImportErrors errors={errors} /> : null}
@@ -655,6 +720,8 @@ function ReviewRows({
             <th>Name</th>
             <th>Email</th>
             <th>Phone</th>
+            <th>Plan</th>
+            <th>Amount</th>
             <th>Expiry</th>
             <th>Status</th>
             {mode === "resolution" ? <th>Resolution</th> : null}
@@ -679,6 +746,10 @@ function ReviewRows({
                 </td>
                 <td data-label="Email">{row.data.email || "-"}</td>
                 <td data-label="Phone">{row.data.phoneNumber}</td>
+                <td data-label="Plan">{row.data.planName || "-"}</td>
+                <td data-label="Amount">
+                  {row.data.membershipAmount || "-"}
+                </td>
                 <td data-label="Expiry">{row.data.expiryDate || "-"}</td>
                 <td data-label="Status">
                   <span

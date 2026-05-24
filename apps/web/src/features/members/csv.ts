@@ -90,6 +90,9 @@ export function parseMembersCsv(csv: string) {
       lastName: row.lastName,
       phoneNumber: row.phoneNumber ?? "",
       email: row.email,
+      planName: row.planName,
+      membershipAmount: row.membershipAmount,
+      startDate: row.startDate,
       expiryDate: row.expiryDate,
       notes: row.notes,
     } satisfies MemberFormInput;
