@@ -6,7 +6,7 @@ import { useAuth } from "./lib/auth/AuthContext";
 import "./App.css";
 
 const navigationItems = [
-  { to: "/", label: "Dashboard", icon: "D" },
+  { to: "/dashboard", label: "Dashboard", icon: "D" },
   { to: "/members", label: "Members", icon: "M" },
   {
     to: "/recovery",
@@ -85,7 +85,7 @@ export function AppLayout() {
   return (
     <div className={`app-shell ${isMobileNavOpen ? "nav-open" : ""}`}>
       <aside className="app-sidebar">
-        <NavLink to="/" className="brand">
+        <NavLink to="/dashboard" className="brand">
           <span className="brand-mark">IC</span>
           <span>
             <strong>IronCore</strong>
@@ -106,7 +106,7 @@ export function AppLayout() {
               <NavLink
                 to={item.to}
                 key={item.to}
-                end={item.to === "/"}
+                end={item.to === "/dashboard"}
                 onClick={() => setIsMobileNavOpen(false)}
               >
                 <span className="nav-icon" aria-hidden="true">

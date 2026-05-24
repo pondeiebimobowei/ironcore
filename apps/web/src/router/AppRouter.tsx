@@ -3,6 +3,7 @@ import { AppLayout } from "../App";
 import { LoginPage } from "../pages/auth/LoginPage";
 import { SignupPage } from "../pages/auth/SignupPage";
 import { DashboardPage } from "../pages/dashboard/DashboardPage";
+import { LandingPage } from "../pages/landing/LandingPage";
 import { MemberDetailPage } from "../pages/members/MemberDetailPage";
 import { MembersPage } from "../pages/members/MembersPage";
 import { CompanySetupPage } from "../pages/onboarding/CompanySetupPage";
@@ -22,16 +23,17 @@ import { WorkflowsPage } from "../pages/workflows/WorkflowsPage";
 import { ProtectedRoute } from "./ProtectedRoute";
 
 export const router = createBrowserRouter([
+  { path: "/", element: <LandingPage /> },
+  { path: "/login", element: <LoginPage /> },
+  { path: "/signup", element: <SignupPage /> },
+  { path: "/onboarding/company", element: <CompanySetupPage /> },
   {
     element: <AppLayout />,
     children: [
-      { path: "/login", element: <LoginPage /> },
-      { path: "/signup", element: <SignupPage /> },
-      { path: "/onboarding/company", element: <CompanySetupPage /> },
       {
         element: <ProtectedRoute />,
         children: [
-          { path: "/", element: <DashboardPage /> },
+          { path: "/dashboard", element: <DashboardPage /> },
           { path: "/members", element: <MembersPage /> },
           { path: "/members/:memberId", element: <MemberDetailPage /> },
           { path: "/payments", element: <PaymentsPage /> },
@@ -74,7 +76,7 @@ export const router = createBrowserRouter([
           },
         ],
       },
-      { path: "*", element: <Navigate to="/" replace /> },
     ],
   },
+  { path: "*", element: <Navigate to="/" replace /> },
 ]);

@@ -34,7 +34,7 @@ export function LoginPage() {
       });
       const redirectPath =
         (location.state as { from?: { pathname?: string } } | null)?.from
-          ?.pathname ?? "/";
+          ?.pathname ?? "/dashboard";
       const nextPath = session.onboardingRequired
         ? "/onboarding/company"
         : redirectPath;

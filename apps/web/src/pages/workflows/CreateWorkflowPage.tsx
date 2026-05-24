@@ -568,7 +568,7 @@ function SuccessView() {
         <Link className="secondary-button" to="/workflows/new">
           Create Another Workflow
         </Link>
-        <Link className="secondary-button" to="/">
+        <Link className="secondary-button" to="/dashboard">
           Go to Dashboard
         </Link>
       </div>

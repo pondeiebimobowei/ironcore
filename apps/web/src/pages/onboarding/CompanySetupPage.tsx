@@ -30,7 +30,7 @@ export function CompanySetupPage() {
   }
 
   if (!auth.onboardingRequired) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -58,7 +58,7 @@ export function CompanySetupPage() {
     try {
       setIsSubmitting(true);
       await auth.setupOrganization(result.data);
-      navigate("/", { replace: true });
+      navigate("/dashboard", { replace: true });
     } catch {
       setError("Could not set up this company.");
     } finally {
