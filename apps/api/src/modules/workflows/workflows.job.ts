@@ -3,6 +3,7 @@ import { Cron } from '@nestjs/schedule';
 import {
   JobRunStatus,
   MessageStatus,
+  TaskPriority,
   TaskType,
   TimelineEventType,
   WorkflowStepStatus,
@@ -18,6 +19,7 @@ import { defaultWorkflowTemplates } from './default-workflow-templates';
 const WORKFLOW_JOB_NAME = 'run-workflow-steps';
 const WORKFLOW_ADVISORY_LOCK_ID = 88002;
 const MAX_RETRY_COUNT = 3;
+const workflowFollowUpTaskTitle = 'Follow up with member';
 
 type AdvisoryLockResult = {
   acquired: boolean;
@@ -163,7 +165,9 @@ export class WorkflowsJob {
               data: {
                 organizationId: step.organizationId,
                 memberId: step.workflow.memberId,
+                title: workflowFollowUpTaskTitle,
                 type: TaskType.FOLLOW_UP_MEMBER,
+                priority: TaskPriority.LOW,
                 dueDate: new Date(),
               },
             });
@@ -288,7 +292,9 @@ export class WorkflowsJob {
         data: {
           organizationId: input.organizationId,
           memberId: input.memberId,
+          title: workflowFollowUpTaskTitle,
           type: TaskType.FOLLOW_UP_MEMBER,
+          priority: TaskPriority.HIGH,
           dueDate: new Date(),
         },
       });

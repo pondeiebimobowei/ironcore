@@ -14,6 +14,7 @@ import { RecoveryQueuePage } from "../pages/recovery/RecoveryQueuePage";
 import { BillingPage } from "../pages/settings/BillingPage";
 import { OrganizationProfilePage } from "../pages/settings/OrganizationProfilePage";
 import { SettingsPage } from "../pages/settings/SettingsPage";
+import { CreateTaskPage } from "../pages/tasks/CreateTaskPage";
 import { TasksPage } from "../pages/tasks/TasksPage";
 import { CreateWorkflowPage } from "../pages/workflows/CreateWorkflowPage";
 import { WorkflowsPage } from "../pages/workflows/WorkflowsPage";
@@ -43,6 +44,7 @@ export const router = createBrowserRouter([
           { path: "/workflows", element: <WorkflowsPage /> },
           { path: "/workflows/new", element: <CreateWorkflowPage /> },
           { path: "/tasks", element: <TasksPage /> },
+          { path: "/tasks/new", element: <CreateTaskPage /> },
           { path: "/settings", element: <SettingsPage /> },
           {
             path: "/settings/organization",

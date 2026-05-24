@@ -12,6 +12,7 @@ import {
   PaymentStatus,
   Prisma,
   PrismaClient,
+  TaskPriority,
   TaskStatus,
   TaskType,
   TimelineEventType,
@@ -19,6 +20,22 @@ import {
   WorkflowStepStatus,
   WorkflowType,
 } from '@prisma/client';
+
+const taskTitles: Record<TaskType, string> = {
+  [TaskType.VERIFY_PAYMENT]: 'Verify payment',
+  [TaskType.FOLLOW_UP_MEMBER]: 'Follow up with member',
+  [TaskType.RESOLVE_OVERDUE_STATUS]: 'Resolve overdue status',
+  [TaskType.REVIEW_AT_RISK_MEMBER]: 'Review at-risk member',
+  [TaskType.REACTIVATION]: 'Start reactivation',
+};
+
+const taskPriorities: Record<TaskType, TaskPriority> = {
+  [TaskType.VERIFY_PAYMENT]: TaskPriority.HIGH,
+  [TaskType.FOLLOW_UP_MEMBER]: TaskPriority.LOW,
+  [TaskType.RESOLVE_OVERDUE_STATUS]: TaskPriority.HIGH,
+  [TaskType.REVIEW_AT_RISK_MEMBER]: TaskPriority.HIGH,
+  [TaskType.REACTIVATION]: TaskPriority.MEDIUM,
+};
 
 const connectionString =
   process.env.DATABASE_URL ??
@@ -756,7 +773,9 @@ async function main() {
           data: {
             organizationId: organization.id,
             memberId: member.id,
+            title: taskTitles[taskType],
             type: taskType,
+            priority: taskPriorities[taskType],
             status:
               taskType === TaskType.FOLLOW_UP_MEMBER
                 ? TaskStatus.IN_PROGRESS

@@ -4,6 +4,7 @@ import {
   MembershipStatus,
   PaymentMethod,
   PaymentStatus,
+  TaskPriority,
   TaskStatus,
   TaskType,
   TimelineEventType,
@@ -54,7 +55,9 @@ const createService = (tx: ReturnType<typeof createTransaction>) => {
         data: {
           organizationId: input.organizationId,
           memberId: input.memberId,
+          title: 'Verify payment',
           type: input.type,
+          priority: TaskPriority.HIGH,
           dueDate: input.dueDate,
         },
       });

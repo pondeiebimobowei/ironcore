@@ -107,6 +107,12 @@ enum TaskStatus {
   CANCELLED
 }
 
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
 enum TimelineEventType {
   MEMBER_CREATED
   MEMBER_UPDATED
@@ -420,8 +426,11 @@ model Task {
   id             String     @id @default(cuid())
   organizationId String
   memberId       String
+  title          String
+  descriptionHtml String?
   type           TaskType
   status         TaskStatus @default(OPEN)
+  priority       TaskPriority @default(MEDIUM)
   assignedToId   String?
   dueDate        DateTime?
   createdAt      DateTime   @default(now())

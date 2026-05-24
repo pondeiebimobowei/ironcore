@@ -1,17 +1,23 @@
 import { apiClient } from "../../lib/api/client";
-import type { Task, TaskStatus, TaskType } from "./types";
+import type { Task, TaskPriority, TaskStatus, TaskType } from "./types";
 
 type UpdateTaskInput = {
+  title?: string;
+  descriptionHtml?: string;
   status?: TaskStatus;
+  priority?: TaskPriority;
   assignedToId?: string;
   dueDate?: string;
 };
 
 export type CreateTaskInput = {
+  title: string;
+  descriptionHtml?: string;
   memberId: string;
   type: TaskType;
+  priority: TaskPriority;
   assignedToId?: string;
-  dueDate?: string;
+  dueDate: string;
 };
 
 export async function listTasks(status?: TaskStatus) {

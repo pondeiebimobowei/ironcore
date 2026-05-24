@@ -7,6 +7,8 @@ export type TaskType =
 
 export type TaskStatus = "OPEN" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
 
+export type TaskPriority = "LOW" | "MEDIUM" | "HIGH";
+
 export type TaskMember = {
   id: string;
   firstName: string;
@@ -24,8 +26,11 @@ export type TaskAssignee = {
 export type Task = {
   id: string;
   memberId: string;
+  title: string;
+  descriptionHtml?: string | null;
   type: TaskType;
   status: TaskStatus;
+  priority: TaskPriority;
   dueDate?: string | null;
   createdAt: string;
   updatedAt: string;
