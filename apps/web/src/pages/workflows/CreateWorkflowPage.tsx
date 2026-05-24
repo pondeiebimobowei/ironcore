@@ -24,52 +24,40 @@ const stepLabels = [
 
 const triggers = [
   {
-    name: "Member Inactivity",
-    detail: "Trigger when a member has been inactive for a set number of days.",
-    icon: "P",
-    tone: "purple",
-  },
-  {
     name: "Membership Expiring",
     detail: "Trigger when a member's membership is about to expire.",
     icon: "C",
     tone: "green",
   },
   {
-    name: "Payment Failed",
-    detail: "Trigger when a member's payment fails or is declined.",
+    name: "Membership Overdue",
+    detail: "Trigger when a member's renewal date has passed.",
     icon: "!",
     tone: "orange",
   },
   {
-    name: "Tag Added",
-    detail: "Trigger when a specific tag is added to a member.",
+    name: "Member At Risk",
+    detail: "Trigger when overdue revenue needs staff review.",
     icon: "T",
     tone: "blue",
-  },
-  {
-    name: "Custom Date",
-    detail: "Trigger on a specific date and time.",
-    icon: "D",
-    tone: "pink",
   },
 ];
 
 const workflowActions = [
   {
-    title: "Send Email",
-    subtitle: "Re-engagement Email - Inactive Members",
+    title: "Mock WhatsApp Reminder",
+    subtitle: "Renewal recovery message",
     timing: "Immediate",
-    description: "Send a personalized re-engagement email to the member.",
+    description: "Log a mock reminder for the member's renewal follow-up.",
     icon: "M",
     tone: "green",
   },
   {
-    title: "Send SMS",
-    subtitle: "Friendly Reminder SMS",
-    timing: "After 2 days",
-    description: "Send an SMS reminder if the member has not re-engaged.",
-    icon: "S",
+    title: "Create Recovery Task",
+    subtitle: "Staff follow-up task",
+    timing: "After 3 days",
+    description: "Create a task for staff to review overdue renewal action.",
+    icon: "T",
     tone: "orange",
   },
 ];
@@ -134,10 +122,10 @@ function WorkflowSummary({
       </dl>
       <div className="summary-divider" />
       <div className="summary-block">
-        <span className="summary-icon purple">P</span>
+        <span className="summary-icon green">C</span>
         <div>
-          <strong>Member Inactivity</strong>
-          <span>After 30 days of inactivity</span>
+          <strong>Membership Expiring</strong>
+          <span>5 days before expiry</span>
         </div>
       </div>
       <div className="summary-actions">
@@ -153,15 +141,15 @@ function WorkflowSummary({
         ))}
       </div>
       <div className="summary-reach">
-        <span>Estimated Reach</span>
-        <strong>~ 126 members</strong>
+        <span>Audience</span>
+        <strong>Expiring members</strong>
       </div>
       <div className="workflow-info-box">
         <strong>{review ? "What happens next?" : "How it works"}</strong>
         <p>
           {review
-            ? "Once activated, this workflow will start running automatically based on the trigger conditions."
-            : "This workflow will automatically run when the trigger conditions are met and will perform the actions in the order you define."}
+            ? "Once activated, this definition can support the recovery sequence for eligible members."
+            : "This workflow definition is scoped to renewal recovery and mock follow-up actions."}
         </p>
       </div>
     </aside>
@@ -255,9 +243,9 @@ function TriggerCards({ compact = false }: { compact?: boolean }) {
       </div>
       <div className="trigger-settings-grid">
         <label>
-          <span>Inactivity Period *</span>
+          <span>Expiry Window *</span>
           <div className="input-with-unit">
-            <input defaultValue="30" />
+            <input defaultValue="5" />
             <b>days</b>
           </div>
         </label>
@@ -268,9 +256,9 @@ function TriggerCards({ compact = false }: { compact?: boolean }) {
           </select>
         </label>
         <label>
-          <span>Re-entry</span>
-          <select defaultValue="After 7 days">
-            <option>After 7 days</option>
+          <span>Follow-up Delay</span>
+          <select defaultValue="After 3 days">
+            <option>After 3 days</option>
           </select>
         </label>
       </div>
@@ -303,24 +291,24 @@ function TriggerStep() {
       </div>
       <div className="trigger-detail-panel">
         <header>
-          <span className="summary-icon purple large">P</span>
+          <span className="summary-icon green large">C</span>
           <div>
-            <h3>Member Inactivity</h3>
+            <h3>Membership Expiring</h3>
             <p>
-              This workflow will start when a member has not checked in for a
-              specified number of days.
+              This workflow definition supports renewal recovery before a
+              membership reaches its expiry date.
             </p>
           </div>
         </header>
         <label>
-          <span>Inactivity Period *</span>
+          <span>Expiry Window *</span>
           <div className="input-with-unit">
-            <input defaultValue="30" />
+            <input defaultValue="5" />
             <b>days</b>
           </div>
           <small>
-            Member must be inactive for this number of days to trigger the
-            workflow.
+            Member must be within this many days of expiry for recovery
+            follow-up.
           </small>
         </label>
         <label>
@@ -336,8 +324,8 @@ function TriggerStep() {
             <option>After 7 days</option>
           </select>
           <small>
-            Allow this workflow to trigger again after the member becomes active
-            and inactive for the specified number of days.
+            Allow this workflow to trigger again after the member renews and
+            later becomes eligible for recovery follow-up.
           </small>
         </label>
         <div className="trigger-condition-box">
@@ -456,19 +444,19 @@ function ReviewStep({ form }: { form: WorkflowWizardForm }) {
         <div className="review-grid">
           <span>
             <small>Trigger Type</small>
-            Member Inactivity
+            Membership Expiring
           </span>
           <span>
             <small>Runs</small>
             Multiple times
           </span>
           <span>
-            <small>Inactivity Period</small>
-            30 days
+            <small>Expiry Window</small>
+            5 days
           </span>
           <span>
-            <small>Re-entry</small>
-            After 7 days
+            <small>Follow-up Delay</small>
+            After 3 days
           </span>
         </div>
       </ReviewSection>
@@ -535,20 +523,20 @@ function SuccessView() {
         <span />
       </div>
       <h1>Workflow Created Successfully!</h1>
-      <p>Your workflow is ready and will start running based on the trigger conditions.</p>
+      <p>Your recovery workflow definition is ready.</p>
       <section className="workflow-success-card">
         <h2>What happens next?</h2>
         {[
-          ["A", "Workflow is Active", "This workflow is now active and will run automatically."],
+          ["A", "Workflow is Active", "This recovery definition is now active."],
           [
             "M",
             "Members will be evaluated",
-            "Members who meet the trigger conditions will be processed.",
+            "Eligible renewal-risk members can be matched to this recovery sequence.",
           ],
           [
             "B",
             "Actions will be performed",
-            "The defined actions will be executed in the order you set.",
+            "Mock reminders and recovery tasks follow the configured order.",
           ],
         ].map(([icon, title, text]) => (
           <article key={title}>
@@ -580,10 +568,9 @@ export function CreateWorkflowPage() {
   const [step, setStep] = useState<WizardStep>(1);
   const [isSuccess, setIsSuccess] = useState(false);
   const [form, setForm] = useState<WorkflowWizardForm>({
-    name: "Inactive Members - Re-engagement Campaign",
-    description:
-      "Automated campaign to re-engage members who haven't visited in 30 days.",
-    category: "Re-engagement",
+    name: "Renewal Recovery Sequence",
+    description: "Mock reminder and staff task sequence for expiring members.",
+    category: "Recovery",
   });
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
@@ -621,24 +608,24 @@ export function CreateWorkflowPage() {
     description: form.description.trim(),
     category: form.category.trim(),
     status,
-    trigger: "Member inactive for 30 days",
-    goal: "Re-engage inactive members",
-    audience: "Inactive members",
+    trigger: "Membership expires in 5 days",
+    goal: "Recover overdue revenue",
+    audience: "Expiring and overdue members",
     timezone: "Africa/Lagos (WAT)",
     steps: [
       {
         dayOffset: 0,
         label: workflowActions[0].title,
         messageTemplate:
-          "Hi {{firstName}}, we miss seeing you at Peak Performance. Here is what is new this week.",
+          "Hi {{firstName}}, your membership expires soon. Renew now to keep training without interruption.",
         createsTask: false,
         sortOrder: 0,
       },
       {
-        dayOffset: 2,
+        dayOffset: 3,
         label: workflowActions[1].title,
         messageTemplate:
-          "Hi {{firstName}}, your training momentum is waiting. Reply START and our team will help you return.",
+          "Hi {{firstName}}, your membership is overdue. Please renew today or reply if you need help.",
         createsTask: true,
         sortOrder: 1,
       },

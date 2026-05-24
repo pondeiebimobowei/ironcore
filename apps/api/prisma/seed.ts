@@ -279,7 +279,7 @@ const demoMembers: DemoMember[] = [
     status: MemberStatus.ACTIVE,
     planName: 'Elite',
     expiryOffsetDays: 45,
-    notes: 'Reactivated with annual upgrade offer.',
+    notes: 'Reactivated after overdue renewal follow-up.',
   },
 ];
 
@@ -512,11 +512,11 @@ const workflowDefinitionSeeds: WorkflowDefinitionSeed[] = [
   {
     key: 'active-reactivation',
     name: 'Reactivation Campaign',
-    description: 'Win-back sequence for inactive/churned members',
+    description: 'Recovery sequence for churned members',
     category: 'Reactivation',
     status: WorkflowDefinitionStatus.ACTIVE,
     trigger: 'Member is marked churned',
-    goal: 'Win back inactive members',
+    goal: 'Recover churned members',
     audience: 'Churned members',
     editor: 'manager',
     startedOffsetDays: -18,
@@ -533,136 +533,6 @@ const workflowDefinitionSeeds: WorkflowDefinitionSeed[] = [
         label: 'Offer reminder',
         messageTemplate:
           'Your reactivation offer is still open. Reply START and our team will help you return.',
-      },
-    ],
-  },
-  {
-    key: 'active-incentive',
-    name: 'Win-back Incentive',
-    description: 'Special offers for inactive high-value members',
-    category: 'Incentive',
-    status: WorkflowDefinitionStatus.ACTIVE,
-    trigger: 'High-value member is inactive',
-    goal: 'Recover high-value accounts',
-    audience: 'Inactive elite plan members',
-    editor: 'analyst',
-    startedOffsetDays: -16,
-    lastEditedOffsetDays: -2,
-    steps: [
-      {
-        dayOffset: 0,
-        label: 'Send incentive',
-        messageTemplate:
-          'Hi {{firstName}}, your return offer is ready. Reply OFFER to claim it.',
-      },
-    ],
-  },
-  {
-    key: 'active-welcome',
-    name: 'Welcome Sequence',
-    description: 'Onboarding messages for new members',
-    category: 'Onboarding',
-    status: WorkflowDefinitionStatus.ACTIVE,
-    trigger: 'New member joins',
-    goal: 'Improve first-week engagement',
-    audience: 'New members',
-    editor: 'admin',
-    startedOffsetDays: -30,
-    lastEditedOffsetDays: -7,
-    steps: [
-      {
-        dayOffset: 0,
-        label: 'Welcome message',
-        messageTemplate:
-          'Welcome to Peak Performance, {{firstName}}. We are glad you are here.',
-      },
-    ],
-  },
-  {
-    key: 'active-upgrade',
-    name: 'Upgrade Nudge',
-    description: 'Encourage plan upgrades for engaged members',
-    category: 'Upgrade',
-    status: WorkflowDefinitionStatus.ACTIVE,
-    trigger: 'Member attends consistently',
-    goal: 'Increase plan upgrades',
-    audience: 'Highly engaged members',
-    editor: 'owner',
-    startedOffsetDays: -12,
-    lastEditedOffsetDays: -5,
-    steps: [
-      {
-        dayOffset: 0,
-        label: 'Upgrade invitation',
-        messageTemplate:
-          'Hi {{firstName}}, your training streak qualifies you for an upgrade consult.',
-      },
-    ],
-  },
-  {
-    key: 'paused-payment-retry',
-    name: 'Payment Retry Sequence',
-    description: 'Retry failed payments automatically',
-    category: 'Payment',
-    status: WorkflowDefinitionStatus.PAUSED,
-    trigger: 'Payment fails',
-    goal: 'Recover failed payments',
-    audience: 'Members with failed payments',
-    editor: 'owner',
-    startedOffsetDays: -6,
-    lastEditedOffsetDays: -1,
-    steps: [
-      {
-        dayOffset: 0,
-        label: 'Payment failed',
-        messageTemplate:
-          'Hi {{firstName}}, your payment failed. Please update payment details.',
-      },
-      {
-        dayOffset: 1,
-        label: 'Retry payment',
-        messageTemplate:
-          'We will retry your membership payment today. Reply HELP if needed.',
-      },
-      {
-        dayOffset: 3,
-        label: 'Reminder email',
-        messageTemplate:
-          'Your membership payment still needs attention. Please contact the front desk.',
-      },
-      {
-        dayOffset: 7,
-        label: 'Final notice',
-        messageTemplate:
-          'Final notice before your membership access is paused.',
-        createsTask: true,
-      },
-      {
-        dayOffset: 10,
-        label: 'Escalation notice',
-        messageTemplate:
-          'We need staff review for your failed payment recovery.',
-        createsTask: true,
-      },
-    ],
-  },
-  {
-    key: 'paused-winback',
-    name: 'Win-back Campaign',
-    description: 'Re-engage inactive members',
-    category: 'Retention',
-    status: WorkflowDefinitionStatus.PAUSED,
-    trigger: 'Member inactive for 45 days',
-    goal: 'Recover inactive members',
-    audience: 'Inactive members',
-    editor: 'manager',
-    startedOffsetDays: -10,
-    lastEditedOffsetDays: -4,
-    steps: [
-      {
-        dayOffset: 0,
-        label: 'Win-back offer',
-        messageTemplate: 'Hi {{firstName}}, we would love to see you again.',
       },
     ],
   },
@@ -688,149 +558,6 @@ const workflowDefinitionSeeds: WorkflowDefinitionSeed[] = [
     ],
   },
   {
-    key: 'paused-birthday',
-    name: 'Birthday Offer',
-    description: 'Send special offers on member birthdays',
-    category: 'Engagement',
-    status: WorkflowDefinitionStatus.PAUSED,
-    trigger: 'Member birthday',
-    goal: 'Increase member loyalty',
-    audience: 'Members with birthdays this month',
-    editor: 'analyst',
-    startedOffsetDays: -9,
-    lastEditedOffsetDays: -5,
-    steps: [
-      {
-        dayOffset: 0,
-        label: 'Birthday offer',
-        messageTemplate:
-          'Happy birthday {{firstName}}. Enjoy a special offer from Peak Performance.',
-      },
-    ],
-  },
-  {
-    key: 'paused-referral',
-    name: 'Referral Incentive',
-    description: 'Reward members for referring others',
-    category: 'Growth',
-    status: WorkflowDefinitionStatus.PAUSED,
-    trigger: 'Referral tag added',
-    goal: 'Increase referrals',
-    audience: 'Members who refer friends',
-    editor: 'manager',
-    startedOffsetDays: -7,
-    lastEditedOffsetDays: -6,
-    steps: [
-      {
-        dayOffset: 0,
-        label: 'Referral reward',
-        messageTemplate:
-          'Thanks for the referral, {{firstName}}. Your reward is ready.',
-      },
-    ],
-  },
-  {
-    key: 'paused-upgrade',
-    name: 'Upgrade Nudge',
-    description: 'Encourage members to upgrade their plan',
-    category: 'Upsell',
-    status: WorkflowDefinitionStatus.PAUSED,
-    trigger: 'Member reaches visit threshold',
-    goal: 'Increase upgrades',
-    audience: 'Engaged standard plan members',
-    editor: 'owner',
-    startedOffsetDays: -11,
-    lastEditedOffsetDays: -7,
-    steps: [
-      {
-        dayOffset: 0,
-        label: 'Upgrade prompt',
-        messageTemplate:
-          'Hi {{firstName}}, you may be ready for our Elite plan.',
-      },
-    ],
-  },
-  {
-    key: 'draft-card-retry',
-    name: 'Expired Card Retry',
-    description: 'Retry failed payments due to expired cards',
-    category: 'Payment',
-    status: WorkflowDefinitionStatus.DRAFT,
-    trigger: 'Payment fails due to expired card',
-    goal: 'Recover failed payments',
-    audience: 'Members with expired cards',
-    editor: 'admin',
-    lastEditedOffsetDays: -1,
-    steps: [
-      {
-        dayOffset: 0,
-        label: 'Card failure notice',
-        messageTemplate:
-          'Hi {{firstName}}, your card appears expired. Please update your payment method.',
-      },
-    ],
-  },
-  {
-    key: 'draft-reengagement-email',
-    name: 'Re-engagement Email Series',
-    description: 'Re-engage inactive members with value-driven emails',
-    category: 'Engagement',
-    status: WorkflowDefinitionStatus.DRAFT,
-    trigger: 'Member inactive for 30 days',
-    goal: 'Restart member engagement',
-    audience: 'Inactive members',
-    editor: 'manager',
-    lastEditedOffsetDays: -1,
-    steps: [
-      {
-        dayOffset: 0,
-        label: 'First re-engagement email',
-        messageTemplate:
-          'Hi {{firstName}}, here is what is new at Peak Performance.',
-      },
-    ],
-  },
-  {
-    key: 'draft-lapsed-winback',
-    name: 'Lapsed Member Win-back',
-    description: 'Win back members who cancelled their membership',
-    category: 'Retention',
-    status: WorkflowDefinitionStatus.DRAFT,
-    trigger: 'Membership cancelled',
-    goal: 'Recover lapsed members',
-    audience: 'Cancelled members',
-    editor: 'analyst',
-    lastEditedOffsetDays: -2,
-    steps: [
-      {
-        dayOffset: 0,
-        label: 'Lapsed member offer',
-        messageTemplate:
-          'Hi {{firstName}}, we can help you restart with a lighter plan.',
-      },
-    ],
-  },
-  {
-    key: 'draft-high-value-offer',
-    name: 'Special Offer for High Value',
-    description: 'Offer discounts to high-value members at risk',
-    category: 'Incentive',
-    status: WorkflowDefinitionStatus.DRAFT,
-    trigger: 'High-value member becomes at risk',
-    goal: 'Retain high-value members',
-    audience: 'High-value at-risk members',
-    editor: 'owner',
-    lastEditedOffsetDays: -2,
-    steps: [
-      {
-        dayOffset: 0,
-        label: 'Special offer',
-        messageTemplate:
-          'Hi {{firstName}}, we created a special retention offer for you.',
-      },
-    ],
-  },
-  {
     key: 'draft-expiry-reminder',
     name: 'Membership Expiry Reminder',
     description: 'Remind members before their membership expires',
@@ -847,26 +574,6 @@ const workflowDefinitionSeeds: WorkflowDefinitionSeed[] = [
         label: 'Expiry reminder',
         messageTemplate:
           'Hi {{firstName}}, your membership expires soon. Renew to keep training.',
-      },
-    ],
-  },
-  {
-    key: 'draft-feedback',
-    name: 'Feedback Request',
-    description: 'Collect feedback after successful recoveries',
-    category: 'Engagement',
-    status: WorkflowDefinitionStatus.DRAFT,
-    trigger: 'Payment recovery completed',
-    goal: 'Improve recovery experience',
-    audience: 'Recovered members',
-    editor: 'analyst',
-    lastEditedOffsetDays: -3,
-    steps: [
-      {
-        dayOffset: 1,
-        label: 'Feedback request',
-        messageTemplate:
-          'Thanks for renewing, {{firstName}}. How was your recovery experience?',
       },
     ],
   },
