@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/unbound-method */
 import {
+  BillingCycle,
   MemberStatus,
   MembershipStatus,
   PaymentMethod,
@@ -22,6 +23,7 @@ const createTransaction = () => ({
     update: jest.fn(),
   },
   membership: {
+    create: jest.fn(),
     update: jest.fn(),
   },
   task: {
@@ -161,9 +163,10 @@ describe('PaymentsService', () => {
     });
   });
 
-  it('approves a payment, activates the membership and member, logs events, and completes verification tasks', async () => {
+  it('approves a payment, creates a renewal membership, logs events, and completes verification tasks', async () => {
     const tx = createTransaction();
     tx.payment.update.mockResolvedValue({ id: 'payment-1' });
+    tx.membership.create.mockResolvedValue({ id: 'membership-renewal-1' });
     tx.task.findMany.mockResolvedValue([{ id: 'task-1' }, { id: 'task-2' }]);
     const { service, prisma } = createService(tx);
     prisma.payment.findFirst
@@ -176,13 +179,27 @@ describe('PaymentsService', () => {
         amountPaid: null,
         status: PaymentStatus.PENDING_VERIFICATION,
         member: { id: 'member-1', status: MemberStatus.PENDING_VERIFICATION },
-        membership: { id: 'membership-1', plan: null },
+        membership: {
+          id: 'membership-1',
+          organizationId: 'org-1',
+          memberId: 'member-1',
+          planId: 'plan-1',
+          startDate: new Date('2026-04-01T00:00:00.000Z'),
+          expiryDate: new Date('2026-04-30T00:00:00.000Z'),
+          status: MembershipStatus.EXPIRED,
+          amount: '85000',
+          currency: 'NGN',
+          plan: {
+            id: 'plan-1',
+            billingCycle: BillingCycle.MONTHLY,
+          },
+        },
       })
       .mockResolvedValueOnce({
         id: 'payment-1',
         status: PaymentStatus.VERIFIED,
         member: { id: 'member-1' },
-        membership: { id: 'membership-1', plan: null },
+        membership: { id: 'membership-renewal-1', plan: null },
       });
 
     await expect(
@@ -199,13 +216,36 @@ describe('PaymentsService', () => {
         rejectionReason: null,
       }),
     });
-    expect(tx.membership.update).toHaveBeenCalledWith({
-      where: { id: 'membership-1' },
-      data: { status: MembershipStatus.ACTIVE },
+    expect(tx.membership.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        organizationId: 'org-1',
+        memberId: 'member-1',
+        planId: 'plan-1',
+        startDate: new Date('2026-05-01T00:00:00.000Z'),
+        expiryDate: new Date('2026-05-31T00:00:00.000Z'),
+        status: MembershipStatus.ACTIVE,
+        amount: '85000',
+        currency: 'NGN',
+      }),
+    });
+    expect(tx.payment.update).toHaveBeenCalledWith({
+      where: { id: 'payment-1' },
+      data: { membershipId: 'membership-renewal-1' },
     });
     expect(tx.member.update).toHaveBeenCalledWith({
       where: { id: 'member-1' },
       data: { status: MemberStatus.ACTIVE },
+    });
+    expect(tx.timelineEvent.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        type: TimelineEventType.MEMBERSHIP_RENEWED,
+        metadata: {
+          paymentId: 'payment-1',
+          previousMembershipId: 'membership-1',
+          membershipId: 'membership-renewal-1',
+          source: 'payment_verified',
+        },
+      }),
     });
     expect(tx.timelineEvent.create).toHaveBeenCalledWith({
       data: expect.objectContaining({

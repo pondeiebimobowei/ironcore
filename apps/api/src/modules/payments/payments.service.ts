@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  BillingCycle,
   MemberStatus,
   MembershipStatus,
   PaymentMethod,
@@ -168,9 +169,27 @@ export class PaymentsService {
       });
 
       if (payment.membershipId) {
-        await tx.membership.update({
-          where: { id: payment.membershipId },
-          data: { status: MembershipStatus.ACTIVE },
+        const renewalMembership = await tx.membership.create({
+          data: this.renewalMembershipData(payment),
+        });
+
+        await tx.payment.update({
+          where: { id: payment.id },
+          data: { membershipId: renewalMembership.id },
+        });
+
+        await tx.timelineEvent.create({
+          data: {
+            organizationId,
+            memberId: payment.memberId,
+            type: TimelineEventType.MEMBERSHIP_RENEWED,
+            metadata: {
+              paymentId: payment.id,
+              previousMembershipId: payment.membershipId,
+              membershipId: renewalMembership.id,
+              source: 'payment_verified',
+            },
+          },
         });
       }
 
@@ -271,5 +290,54 @@ export class PaymentsService {
     });
 
     return this.get(organizationId, rejectedPayment.id);
+  }
+
+  private renewalMembershipData(
+    payment: Awaited<ReturnType<PaymentsService['get']>>,
+  ) {
+    const previousMembership = payment.membership;
+
+    if (!previousMembership) {
+      throw new BadRequestException('Payment is not linked to a membership');
+    }
+
+    const startDate = this.addDays(previousMembership.expiryDate, 1);
+    const expiryDate = this.addMembershipPeriod(
+      startDate,
+      previousMembership.plan?.billingCycle,
+    );
+
+    return {
+      organizationId: payment.organizationId,
+      memberId: payment.memberId,
+      planId: previousMembership.planId,
+      startDate,
+      expiryDate,
+      status: MembershipStatus.ACTIVE,
+      amount: payment.amountPaid ?? payment.amountExpected,
+      currency: previousMembership.currency,
+    };
+  }
+
+  private addMembershipPeriod(startDate: Date, billingCycle?: BillingCycle) {
+    const expiryDate = new Date(startDate);
+
+    if (billingCycle === BillingCycle.QUARTERLY) {
+      expiryDate.setMonth(expiryDate.getMonth() + 3);
+    } else if (billingCycle === BillingCycle.ANNUAL) {
+      expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+    } else {
+      expiryDate.setMonth(expiryDate.getMonth() + 1);
+    }
+
+    expiryDate.setDate(expiryDate.getDate() - 1);
+
+    return expiryDate;
+  }
+
+  private addDays(date: Date, days: number) {
+    const next = new Date(date);
+    next.setDate(next.getDate() + days);
+    return next;
   }
 }
