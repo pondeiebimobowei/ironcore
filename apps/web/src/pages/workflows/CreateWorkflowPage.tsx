@@ -1,8 +1,19 @@
 import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { createWorkflow } from "../../features/workflows/api";
+import type {
+  CreateWorkflowDefinitionInput,
+  WorkflowDefinitionStatus,
+} from "../../features/workflows/types";
 
 type WizardStep = 1 | 2 | 3 | 4;
+
+type WorkflowWizardForm = {
+  name: string;
+  description: string;
+  category: string;
+};
 
 const stepLabels = [
   "Workflow Details",
@@ -87,19 +98,25 @@ function WizardProgress({ step }: { step: WizardStep }) {
   );
 }
 
-function WorkflowSummary({ review = false }: { review?: boolean }) {
+function WorkflowSummary({
+  form,
+  review = false,
+}: {
+  form: WorkflowWizardForm;
+  review?: boolean;
+}) {
   return (
     <aside className="workflow-summary-card">
       <h2>Workflow Summary</h2>
       <dl>
         <div>
           <dt>Workflow Name</dt>
-          <dd>Inactive Members - Re-engagement Campaign</dd>
+          <dd>{form.name}</dd>
         </div>
         <div>
           <dt>Category</dt>
           <dd>
-            <span className="summary-chip purple">Re-engagement</span>
+            <span className="summary-chip purple">{form.category}</span>
           </dd>
         </div>
         <div>
@@ -151,25 +168,49 @@ function WorkflowSummary({ review = false }: { review?: boolean }) {
   );
 }
 
-function DetailsStep({ compact = false }: { compact?: boolean }) {
+function DetailsStep({
+  compact = false,
+  form,
+  onChange,
+}: {
+  compact?: boolean;
+  form: WorkflowWizardForm;
+  onChange: (form: WorkflowWizardForm) => void;
+}) {
   return (
     <section className="workflow-builder-card">
       <h2>1. Workflow Details</h2>
       <div className="workflow-form-grid">
         <label>
           <span>Workflow Name *</span>
-          <input defaultValue="Inactive Members - Re-engagement Campaign" />
+          <input
+            value={form.name}
+            onChange={(event) => onChange({ ...form, name: event.target.value })}
+          />
           <small>Give your workflow a descriptive name.</small>
         </label>
         <label className="wide">
           <span>Workflow Description (Optional)</span>
-          <textarea defaultValue="Automated campaign to re-engage members who haven't visited in 30 days." />
+          <textarea
+            value={form.description}
+            onChange={(event) =>
+              onChange({ ...form, description: event.target.value })
+            }
+          />
           <small>69 / 255</small>
         </label>
         <label>
           <span>Workflow Category *</span>
-          <select defaultValue="Re-engagement">
+          <select
+            value={form.category}
+            onChange={(event) =>
+              onChange({ ...form, category: event.target.value })
+            }
+          >
             <option>Re-engagement</option>
+            <option>Engagement</option>
+            <option>Retention</option>
+            <option>Payment</option>
           </select>
         </label>
         <label>
@@ -382,7 +423,7 @@ function ActionsStep() {
   );
 }
 
-function ReviewStep() {
+function ReviewStep({ form }: { form: WorkflowWizardForm }) {
   return (
     <section className="workflow-builder-card review-card">
       <h2>4. Review & Activate</h2>
@@ -391,16 +432,15 @@ function ReviewStep() {
         <div className="review-grid">
           <span>
             <small>Workflow Name</small>
-            Inactive Members - Re-engagement Campaign
+            {form.name}
           </span>
           <span>
             <small>Category</small>
-            <b className="summary-chip purple">Re-engagement</b>
+            <b className="summary-chip purple">{form.category}</b>
           </span>
           <span className="wide">
             <small>Description</small>
-            Automated campaign to re-engage members who haven't visited in 30
-            days.
+            {form.description}
           </span>
           <span>
             <small>Status</small>
@@ -539,11 +579,19 @@ function SuccessView() {
 export function CreateWorkflowPage() {
   const [step, setStep] = useState<WizardStep>(1);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [form, setForm] = useState<WorkflowWizardForm>({
+    name: "Inactive Members - Re-engagement Campaign",
+    description:
+      "Automated campaign to re-engage members who haven't visited in 30 days.",
+    category: "Re-engagement",
+  });
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState("");
   const navigate = useNavigate();
 
   const stepContent = useMemo(() => {
     if (step === 1) {
-      return <DetailsStep />;
+      return <DetailsStep form={form} onChange={setForm} />;
     }
 
     if (step === 2) {
@@ -554,8 +602,8 @@ export function CreateWorkflowPage() {
       return <ActionsStep />;
     }
 
-    return <ReviewStep />;
-  }, [step]);
+    return <ReviewStep form={form} />;
+  }, [form, step]);
 
   const nextLabel =
     step === 1
@@ -566,13 +614,76 @@ export function CreateWorkflowPage() {
           ? "Next: Review & Activate"
           : "Activate Workflow";
 
-  const handleNext = () => {
+  const buildPayload = (
+    status: WorkflowDefinitionStatus,
+  ): CreateWorkflowDefinitionInput => ({
+    name: form.name.trim(),
+    description: form.description.trim(),
+    category: form.category.trim(),
+    status,
+    trigger: "Member inactive for 30 days",
+    goal: "Re-engage inactive members",
+    audience: "Inactive members",
+    timezone: "Africa/Lagos (WAT)",
+    steps: [
+      {
+        dayOffset: 0,
+        label: workflowActions[0].title,
+        messageTemplate:
+          "Hi {{firstName}}, we miss seeing you at Peak Performance. Here is what is new this week.",
+        createsTask: false,
+        sortOrder: 0,
+      },
+      {
+        dayOffset: 2,
+        label: workflowActions[1].title,
+        messageTemplate:
+          "Hi {{firstName}}, your training momentum is waiting. Reply START and our team will help you return.",
+        createsTask: true,
+        sortOrder: 1,
+      },
+    ],
+  });
+
+  const saveWorkflow = async (status: WorkflowDefinitionStatus) => {
+    setError("");
+
+    if (!form.name.trim() || !form.description.trim() || !form.category.trim()) {
+      setError("Add a workflow name, description, and category before saving.");
+      return false;
+    }
+
+    try {
+      setIsSaving(true);
+      await createWorkflow(buildPayload(status));
+      return true;
+    } catch {
+      setError("Could not save this workflow.");
+      return false;
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleNext = async () => {
     if (step < 4) {
       setStep((current) => (current + 1) as WizardStep);
       return;
     }
 
-    setIsSuccess(true);
+    const saved = await saveWorkflow("ACTIVE");
+
+    if (saved) {
+      setIsSuccess(true);
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    const saved = await saveWorkflow("DRAFT");
+
+    if (saved) {
+      navigate("/workflows", { replace: true });
+    }
   };
 
   if (isSuccess) {
@@ -597,8 +708,13 @@ export function CreateWorkflowPage() {
       <WizardProgress step={step} />
       <div className="workflow-create-layout">
         {stepContent}
-        <WorkflowSummary review={step === 4} />
+        <WorkflowSummary form={form} review={step === 4} />
       </div>
+      {error ? (
+        <section className="dashboard-state dashboard-state-error compact-state">
+          <strong>{error}</strong>
+        </section>
+      ) : null}
       <footer className="workflow-builder-footer">
         <button
           type="button"
@@ -619,9 +735,20 @@ export function CreateWorkflowPage() {
               Cancel
             </button>
           ) : null}
-          <button type="button">Save as Draft</button>
-          <button className="primary-button" type="button" onClick={handleNext}>
-            {nextLabel}
+          <button
+            type="button"
+            disabled={isSaving}
+            onClick={() => void handleSaveDraft()}
+          >
+            {isSaving ? "Saving..." : "Save as Draft"}
+          </button>
+          <button
+            className="primary-button"
+            type="button"
+            disabled={isSaving}
+            onClick={() => void handleNext()}
+          >
+            {isSaving && step === 4 ? "Saving..." : nextLabel}
           </button>
         </div>
       </footer>

@@ -73,6 +73,12 @@ enum WorkflowStatus {
   CANCELLED
 }
 
+enum WorkflowDefinitionStatus {
+  ACTIVE
+  PAUSED
+  DRAFT
+}
+
 enum WorkflowStepStatus {
   PENDING
   SENT
@@ -168,6 +174,7 @@ model Organization {
   memberships             Membership[]
   payments                Payment[]
   workflows               Workflow[]
+  workflowDefinitions     WorkflowDefinition[]
   workflowSteps           WorkflowStep[]
   messageLogs             MessageLog[]
   tasks                   Task[]
@@ -190,6 +197,7 @@ model User {
   refreshTokens           RefreshToken[]
   verifiedPayments        Payment[]                @relation("PaymentVerifiedBy")
   assignedTasks           Task[]                   @relation("TaskAssignedTo")
+  editedWorkflowDefinitions WorkflowDefinition[]    @relation("WorkflowDefinitionLastEditedBy")
 }
 
 model OrganizationMembership {
@@ -355,6 +363,7 @@ model Payment {
 model Workflow {
   id               String         @id @default(cuid())
   organizationId   String
+  workflowDefinitionId String?
   memberId         String
   membershipId     String?
   type             WorkflowType
@@ -366,15 +375,62 @@ model Workflow {
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
 
-  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  member       Member         @relation(fields: [memberId], references: [id], onDelete: Restrict)
-  membership   Membership?    @relation(fields: [membershipId], references: [id], onDelete: SetNull)
-  steps        WorkflowStep[]
+  organization       Organization        @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  workflowDefinition WorkflowDefinition? @relation(fields: [workflowDefinitionId], references: [id], onDelete: SetNull)
+  member             Member              @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  membership         Membership?         @relation(fields: [membershipId], references: [id], onDelete: SetNull)
+  steps              WorkflowStep[]
 
   @@index([organizationId])
   @@index([organizationId, status])
   @@index([organizationId, nextRunAt])
+  @@index([workflowDefinitionId])
   @@index([memberId])
+}
+
+model WorkflowDefinition {
+  id             String                   @id @default(cuid())
+  organizationId String
+  name           String
+  description    String
+  category       String
+  status         WorkflowDefinitionStatus @default(DRAFT)
+  trigger        String
+  goal           String
+  audience       String
+  timezone       String                   @default("Africa/Lagos (WAT)")
+  startedAt      DateTime?
+  lastEditedAt   DateTime                 @default(now())
+  lastEditedById String?
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+
+  organization Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  lastEditedBy User?                    @relation("WorkflowDefinitionLastEditedBy", fields: [lastEditedById], references: [id], onDelete: SetNull)
+  steps        WorkflowDefinitionStep[]
+  workflows    Workflow[]
+
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@index([organizationId, category])
+  @@index([lastEditedById])
+}
+
+model WorkflowDefinitionStep {
+  id                   String   @id @default(cuid())
+  workflowDefinitionId String
+  dayOffset            Int
+  label                String
+  messageTemplate      String
+  createsTask          Boolean  @default(false)
+  sortOrder            Int
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  workflowDefinition WorkflowDefinition @relation(fields: [workflowDefinitionId], references: [id], onDelete: Cascade)
+
+  @@index([workflowDefinitionId])
+  @@index([workflowDefinitionId, sortOrder])
 }
 
 model WorkflowStep {

@@ -226,6 +226,7 @@ Both require an authenticated owner account.
 
 - WhatsApp is mocked; no real WhatsApp Business API messages are sent.
 - Billing is a placeholder and does not connect to a payment processor.
+- Workflow definitions are persisted for list/detail screens and the fixed create wizard; arbitrary branching, drag-and-drop automation, and automatic execution generation from custom definitions remain out of scope.
 - Organization profile persistence covers core business, contact, address, business-hour, logo URL, and image URL fields.
 - Image and logo upload mechanics are placeholders; URLs can be stored, but file storage is not enabled yet.
 - File proof upload/storage is not enabled yet.

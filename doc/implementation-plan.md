@@ -772,7 +772,7 @@ Seed:
   - reactivated
 - sample memberships
 - sample payments
-- default workflows
+- persisted workflow definitions and linked execution workflows
 - sample tasks
 - timeline events
 
@@ -1494,7 +1494,7 @@ WorkflowReviewPanel
 
 ### MVP Behavior
 
-- show default workflows
+- show persisted workflow definitions
 - allow active/paused toggle
 - preview sequence messages
 - show a workflow list screen with operational metrics and selected workflow details

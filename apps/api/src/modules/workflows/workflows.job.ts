@@ -6,6 +6,7 @@ import {
   TaskPriority,
   TaskType,
   TimelineEventType,
+  WorkflowDefinitionStatus,
   WorkflowStepStatus,
   WorkflowStatus,
   WorkflowType,
@@ -93,6 +94,14 @@ export class WorkflowsJob {
             status: WorkflowStepStatus.PENDING,
             workflow: {
               status: WorkflowStatus.ACTIVE,
+              OR: [
+                { workflowDefinitionId: null },
+                {
+                  workflowDefinition: {
+                    status: WorkflowDefinitionStatus.ACTIVE,
+                  },
+                },
+              ],
             },
           },
           include: {

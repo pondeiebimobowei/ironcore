@@ -11,9 +11,11 @@ export const defaultWorkflowTemplates: WorkflowTemplate[] = [
       {
         id: "renewal-reminder-day-minus-5",
         dayOffset: -5,
+        label: "Reminder before expiry",
         messageTemplate:
           "Hi {{firstName}}, your membership expires in 5 days. Renew now to keep training without interruption.",
         createsTask: false,
+        sortOrder: 0,
       },
     ],
   },
@@ -27,9 +29,11 @@ export const defaultWorkflowTemplates: WorkflowTemplate[] = [
       {
         id: "overdue-follow-up-day-plus-3",
         dayOffset: 3,
+        label: "Overdue follow-up",
         messageTemplate:
           "Hi {{firstName}}, your membership is overdue. Please renew today or reply if you need help.",
         createsTask: true,
+        sortOrder: 0,
       },
     ],
   },

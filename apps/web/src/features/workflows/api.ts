@@ -1,17 +1,30 @@
 import { apiClient } from "../../lib/api/client";
-import type { WorkflowStatus, WorkflowTemplate } from "./types";
+import type {
+  CreateWorkflowDefinitionInput,
+  WorkflowDefinition,
+  WorkflowDefinitionStatus,
+} from "./types";
 
 export async function listWorkflows() {
-  const response = await apiClient.get<WorkflowTemplate[]>("/api/workflows");
+  const response = await apiClient.get<WorkflowDefinition[]>("/api/workflows");
+
+  return response.data;
+}
+
+export async function createWorkflow(input: CreateWorkflowDefinitionInput) {
+  const response = await apiClient.post<WorkflowDefinition>(
+    "/api/workflows",
+    input,
+  );
 
   return response.data;
 }
 
 export async function updateWorkflowStatus(
   workflowId: string,
-  status: WorkflowStatus,
+  status: WorkflowDefinitionStatus,
 ) {
-  const response = await apiClient.patch<WorkflowTemplate>(
+  const response = await apiClient.patch<WorkflowDefinition>(
     `/api/workflows/${workflowId}`,
     { status },
   );

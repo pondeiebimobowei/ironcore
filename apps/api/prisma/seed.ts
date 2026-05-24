@@ -16,6 +16,7 @@ import {
   TaskStatus,
   TaskType,
   TimelineEventType,
+  WorkflowDefinitionStatus,
   WorkflowStatus,
   WorkflowStepStatus,
   WorkflowType,
@@ -405,6 +406,516 @@ const workflowTemplates = (type: WorkflowType) => {
   ];
 };
 
+type WorkflowDefinitionSeed = {
+  key: string;
+  name: string;
+  description: string;
+  category: string;
+  status: WorkflowDefinitionStatus;
+  trigger: string;
+  goal: string;
+  audience: string;
+  editor: 'owner' | 'admin' | 'manager' | 'analyst';
+  startedOffsetDays?: number;
+  lastEditedOffsetDays: number;
+  steps: Array<{
+    dayOffset: number;
+    label: string;
+    messageTemplate: string;
+    createsTask?: boolean;
+  }>;
+};
+
+const workflowDefinitionSeeds: WorkflowDefinitionSeed[] = [
+  {
+    key: 'active-renewal',
+    name: 'Renewal Recovery',
+    description: 'Reminder sequence for upcoming expirations',
+    category: 'Renewal',
+    status: WorkflowDefinitionStatus.ACTIVE,
+    trigger: 'Membership expires in 5 days',
+    goal: 'Prevent overdue & reduce churn',
+    audience: 'Expiring soon members',
+    editor: 'owner',
+    startedOffsetDays: -23,
+    lastEditedOffsetDays: -4,
+    steps: [
+      {
+        dayOffset: -5,
+        label: 'Reminder: 5 days before expiry',
+        messageTemplate:
+          'Hi {{firstName}}, your membership expires in 5 days. Renew now to keep training without interruption.',
+      },
+      {
+        dayOffset: 0,
+        label: 'Expiry day notice',
+        messageTemplate:
+          'Your membership expires today. Send proof after payment and we will verify it quickly.',
+      },
+      {
+        dayOffset: 3,
+        label: 'Overdue follow-up',
+        messageTemplate:
+          'Hi {{firstName}}, your membership is overdue. Please renew today or reply if you need help.',
+        createsTask: true,
+      },
+      {
+        dayOffset: 7,
+        label: 'Escalation message',
+        messageTemplate:
+          'We have kept your slot open. Please renew today or let us know if you need help.',
+        createsTask: true,
+      },
+      {
+        dayOffset: 14,
+        label: 'Final reminder & offer',
+        messageTemplate:
+          'Final reminder before your account is marked at risk. Reply RENEW to continue.',
+        createsTask: true,
+      },
+    ],
+  },
+  {
+    key: 'active-overdue',
+    name: 'Overdue Follow-up',
+    description: 'Follow-up sequence for overdue members',
+    category: 'Overdue',
+    status: WorkflowDefinitionStatus.ACTIVE,
+    trigger: 'Membership becomes overdue',
+    goal: 'Recover overdue revenue',
+    audience: 'Overdue members',
+    editor: 'admin',
+    startedOffsetDays: -20,
+    lastEditedOffsetDays: -3,
+    steps: [
+      {
+        dayOffset: 1,
+        label: 'First overdue reminder',
+        messageTemplate:
+          'Hi {{firstName}}, your membership is overdue. You can renew by bank transfer and send proof here.',
+      },
+      {
+        dayOffset: 3,
+        label: 'Follow-up message',
+        messageTemplate:
+          'We have kept your slot open. Please renew today or let us know if you need help.',
+      },
+      {
+        dayOffset: 7,
+        label: 'Escalation task',
+        messageTemplate:
+          'Final reminder before your account is marked at risk. Reply RENEW to continue.',
+        createsTask: true,
+      },
+    ],
+  },
+  {
+    key: 'active-reactivation',
+    name: 'Reactivation Campaign',
+    description: 'Win-back sequence for inactive/churned members',
+    category: 'Reactivation',
+    status: WorkflowDefinitionStatus.ACTIVE,
+    trigger: 'Member is marked churned',
+    goal: 'Win back inactive members',
+    audience: 'Churned members',
+    editor: 'manager',
+    startedOffsetDays: -18,
+    lastEditedOffsetDays: -2,
+    steps: [
+      {
+        dayOffset: 0,
+        label: 'Reactivation offer',
+        messageTemplate:
+          'Hi {{firstName}}, we miss you at IronCore. Restart this week and we will waive the restart fee.',
+      },
+      {
+        dayOffset: 4,
+        label: 'Offer reminder',
+        messageTemplate:
+          'Your reactivation offer is still open. Reply START and our team will help you return.',
+      },
+    ],
+  },
+  {
+    key: 'active-incentive',
+    name: 'Win-back Incentive',
+    description: 'Special offers for inactive high-value members',
+    category: 'Incentive',
+    status: WorkflowDefinitionStatus.ACTIVE,
+    trigger: 'High-value member is inactive',
+    goal: 'Recover high-value accounts',
+    audience: 'Inactive elite plan members',
+    editor: 'analyst',
+    startedOffsetDays: -16,
+    lastEditedOffsetDays: -2,
+    steps: [
+      {
+        dayOffset: 0,
+        label: 'Send incentive',
+        messageTemplate:
+          'Hi {{firstName}}, your return offer is ready. Reply OFFER to claim it.',
+      },
+    ],
+  },
+  {
+    key: 'active-welcome',
+    name: 'Welcome Sequence',
+    description: 'Onboarding messages for new members',
+    category: 'Onboarding',
+    status: WorkflowDefinitionStatus.ACTIVE,
+    trigger: 'New member joins',
+    goal: 'Improve first-week engagement',
+    audience: 'New members',
+    editor: 'admin',
+    startedOffsetDays: -30,
+    lastEditedOffsetDays: -7,
+    steps: [
+      {
+        dayOffset: 0,
+        label: 'Welcome message',
+        messageTemplate:
+          'Welcome to Peak Performance, {{firstName}}. We are glad you are here.',
+      },
+    ],
+  },
+  {
+    key: 'active-upgrade',
+    name: 'Upgrade Nudge',
+    description: 'Encourage plan upgrades for engaged members',
+    category: 'Upgrade',
+    status: WorkflowDefinitionStatus.ACTIVE,
+    trigger: 'Member attends consistently',
+    goal: 'Increase plan upgrades',
+    audience: 'Highly engaged members',
+    editor: 'owner',
+    startedOffsetDays: -12,
+    lastEditedOffsetDays: -5,
+    steps: [
+      {
+        dayOffset: 0,
+        label: 'Upgrade invitation',
+        messageTemplate:
+          'Hi {{firstName}}, your training streak qualifies you for an upgrade consult.',
+      },
+    ],
+  },
+  {
+    key: 'paused-payment-retry',
+    name: 'Payment Retry Sequence',
+    description: 'Retry failed payments automatically',
+    category: 'Payment',
+    status: WorkflowDefinitionStatus.PAUSED,
+    trigger: 'Payment fails',
+    goal: 'Recover failed payments',
+    audience: 'Members with failed payments',
+    editor: 'owner',
+    startedOffsetDays: -6,
+    lastEditedOffsetDays: -1,
+    steps: [
+      {
+        dayOffset: 0,
+        label: 'Payment failed',
+        messageTemplate:
+          'Hi {{firstName}}, your payment failed. Please update payment details.',
+      },
+      {
+        dayOffset: 1,
+        label: 'Retry payment',
+        messageTemplate:
+          'We will retry your membership payment today. Reply HELP if needed.',
+      },
+      {
+        dayOffset: 3,
+        label: 'Reminder email',
+        messageTemplate:
+          'Your membership payment still needs attention. Please contact the front desk.',
+      },
+      {
+        dayOffset: 7,
+        label: 'Final notice',
+        messageTemplate:
+          'Final notice before your membership access is paused.',
+        createsTask: true,
+      },
+      {
+        dayOffset: 10,
+        label: 'Escalation notice',
+        messageTemplate:
+          'We need staff review for your failed payment recovery.',
+        createsTask: true,
+      },
+    ],
+  },
+  {
+    key: 'paused-winback',
+    name: 'Win-back Campaign',
+    description: 'Re-engage inactive members',
+    category: 'Retention',
+    status: WorkflowDefinitionStatus.PAUSED,
+    trigger: 'Member inactive for 45 days',
+    goal: 'Recover inactive members',
+    audience: 'Inactive members',
+    editor: 'manager',
+    startedOffsetDays: -10,
+    lastEditedOffsetDays: -4,
+    steps: [
+      {
+        dayOffset: 0,
+        label: 'Win-back offer',
+        messageTemplate: 'Hi {{firstName}}, we would love to see you again.',
+      },
+    ],
+  },
+  {
+    key: 'paused-overdue',
+    name: 'Overdue Reminder',
+    description: 'Remind members with overdue payments',
+    category: 'Payment',
+    status: WorkflowDefinitionStatus.PAUSED,
+    trigger: 'Payment is overdue',
+    goal: 'Recover overdue payments',
+    audience: 'Overdue members',
+    editor: 'admin',
+    startedOffsetDays: -8,
+    lastEditedOffsetDays: -4,
+    steps: [
+      {
+        dayOffset: 0,
+        label: 'Overdue notice',
+        messageTemplate:
+          'Hi {{firstName}}, your payment is overdue. Please renew today.',
+      },
+    ],
+  },
+  {
+    key: 'paused-birthday',
+    name: 'Birthday Offer',
+    description: 'Send special offers on member birthdays',
+    category: 'Engagement',
+    status: WorkflowDefinitionStatus.PAUSED,
+    trigger: 'Member birthday',
+    goal: 'Increase member loyalty',
+    audience: 'Members with birthdays this month',
+    editor: 'analyst',
+    startedOffsetDays: -9,
+    lastEditedOffsetDays: -5,
+    steps: [
+      {
+        dayOffset: 0,
+        label: 'Birthday offer',
+        messageTemplate:
+          'Happy birthday {{firstName}}. Enjoy a special offer from Peak Performance.',
+      },
+    ],
+  },
+  {
+    key: 'paused-referral',
+    name: 'Referral Incentive',
+    description: 'Reward members for referring others',
+    category: 'Growth',
+    status: WorkflowDefinitionStatus.PAUSED,
+    trigger: 'Referral tag added',
+    goal: 'Increase referrals',
+    audience: 'Members who refer friends',
+    editor: 'manager',
+    startedOffsetDays: -7,
+    lastEditedOffsetDays: -6,
+    steps: [
+      {
+        dayOffset: 0,
+        label: 'Referral reward',
+        messageTemplate:
+          'Thanks for the referral, {{firstName}}. Your reward is ready.',
+      },
+    ],
+  },
+  {
+    key: 'paused-upgrade',
+    name: 'Upgrade Nudge',
+    description: 'Encourage members to upgrade their plan',
+    category: 'Upsell',
+    status: WorkflowDefinitionStatus.PAUSED,
+    trigger: 'Member reaches visit threshold',
+    goal: 'Increase upgrades',
+    audience: 'Engaged standard plan members',
+    editor: 'owner',
+    startedOffsetDays: -11,
+    lastEditedOffsetDays: -7,
+    steps: [
+      {
+        dayOffset: 0,
+        label: 'Upgrade prompt',
+        messageTemplate:
+          'Hi {{firstName}}, you may be ready for our Elite plan.',
+      },
+    ],
+  },
+  {
+    key: 'draft-card-retry',
+    name: 'Expired Card Retry',
+    description: 'Retry failed payments due to expired cards',
+    category: 'Payment',
+    status: WorkflowDefinitionStatus.DRAFT,
+    trigger: 'Payment fails due to expired card',
+    goal: 'Recover failed payments',
+    audience: 'Members with expired cards',
+    editor: 'admin',
+    lastEditedOffsetDays: -1,
+    steps: [
+      {
+        dayOffset: 0,
+        label: 'Card failure notice',
+        messageTemplate:
+          'Hi {{firstName}}, your card appears expired. Please update your payment method.',
+      },
+    ],
+  },
+  {
+    key: 'draft-reengagement-email',
+    name: 'Re-engagement Email Series',
+    description: 'Re-engage inactive members with value-driven emails',
+    category: 'Engagement',
+    status: WorkflowDefinitionStatus.DRAFT,
+    trigger: 'Member inactive for 30 days',
+    goal: 'Restart member engagement',
+    audience: 'Inactive members',
+    editor: 'manager',
+    lastEditedOffsetDays: -1,
+    steps: [
+      {
+        dayOffset: 0,
+        label: 'First re-engagement email',
+        messageTemplate:
+          'Hi {{firstName}}, here is what is new at Peak Performance.',
+      },
+    ],
+  },
+  {
+    key: 'draft-lapsed-winback',
+    name: 'Lapsed Member Win-back',
+    description: 'Win back members who cancelled their membership',
+    category: 'Retention',
+    status: WorkflowDefinitionStatus.DRAFT,
+    trigger: 'Membership cancelled',
+    goal: 'Recover lapsed members',
+    audience: 'Cancelled members',
+    editor: 'analyst',
+    lastEditedOffsetDays: -2,
+    steps: [
+      {
+        dayOffset: 0,
+        label: 'Lapsed member offer',
+        messageTemplate:
+          'Hi {{firstName}}, we can help you restart with a lighter plan.',
+      },
+    ],
+  },
+  {
+    key: 'draft-high-value-offer',
+    name: 'Special Offer for High Value',
+    description: 'Offer discounts to high-value members at risk',
+    category: 'Incentive',
+    status: WorkflowDefinitionStatus.DRAFT,
+    trigger: 'High-value member becomes at risk',
+    goal: 'Retain high-value members',
+    audience: 'High-value at-risk members',
+    editor: 'owner',
+    lastEditedOffsetDays: -2,
+    steps: [
+      {
+        dayOffset: 0,
+        label: 'Special offer',
+        messageTemplate:
+          'Hi {{firstName}}, we created a special retention offer for you.',
+      },
+    ],
+  },
+  {
+    key: 'draft-expiry-reminder',
+    name: 'Membership Expiry Reminder',
+    description: 'Remind members before their membership expires',
+    category: 'Onboarding',
+    status: WorkflowDefinitionStatus.DRAFT,
+    trigger: 'Membership expires soon',
+    goal: 'Prevent expiry',
+    audience: 'Expiring members',
+    editor: 'admin',
+    lastEditedOffsetDays: -3,
+    steps: [
+      {
+        dayOffset: -5,
+        label: 'Expiry reminder',
+        messageTemplate:
+          'Hi {{firstName}}, your membership expires soon. Renew to keep training.',
+      },
+    ],
+  },
+  {
+    key: 'draft-feedback',
+    name: 'Feedback Request',
+    description: 'Collect feedback after successful recoveries',
+    category: 'Engagement',
+    status: WorkflowDefinitionStatus.DRAFT,
+    trigger: 'Payment recovery completed',
+    goal: 'Improve recovery experience',
+    audience: 'Recovered members',
+    editor: 'analyst',
+    lastEditedOffsetDays: -3,
+    steps: [
+      {
+        dayOffset: 1,
+        label: 'Feedback request',
+        messageTemplate:
+          'Thanks for renewing, {{firstName}}. How was your recovery experience?',
+      },
+    ],
+  },
+];
+
+const seedWorkflowDefinitions = async (
+  tx: Prisma.TransactionClient,
+  organizationId: string,
+  editors: Record<WorkflowDefinitionSeed['editor'], { id: string }>,
+  today: Date,
+) => {
+  const definitions = new Map<string, string>();
+
+  for (const seed of workflowDefinitionSeeds) {
+    const editor = editors[seed.editor];
+    const definition = await tx.workflowDefinition.create({
+      data: {
+        organizationId,
+        name: seed.name,
+        description: seed.description,
+        category: seed.category,
+        status: seed.status,
+        trigger: seed.trigger,
+        goal: seed.goal,
+        audience: seed.audience,
+        timezone: 'Africa/Lagos (WAT)',
+        startedAt:
+          seed.status === WorkflowDefinitionStatus.DRAFT
+            ? null
+            : addDays(today, seed.startedOffsetDays ?? -1),
+        lastEditedAt: addDays(today, seed.lastEditedOffsetDays),
+        lastEditedById: editor.id,
+        steps: {
+          create: seed.steps.map((step, index) => ({
+            dayOffset: step.dayOffset,
+            label: step.label,
+            messageTemplate: step.messageTemplate,
+            createsTask: step.createsTask ?? false,
+            sortOrder: index,
+          })),
+        },
+      },
+    });
+    definitions.set(seed.key, definition.id);
+  }
+
+  return definitions;
+};
+
 async function main() {
   const today = startOfToday();
 
@@ -458,20 +969,67 @@ async function main() {
 
     const owner = await tx.user.create({
       data: {
-        fullName: 'John Owner',
+        fullName: 'John Adebayo',
         email: demoOwnerEmail,
         passwordHash: await hash(demoOwnerPassword, 12),
       },
     });
 
-    await tx.organizationMembership.create({
-      data: {
-        organizationId: organization.id,
-        userId: owner.id,
-        role: OrganizationRole.OWNER,
-        status: OrganizationMembershipStatus.ACTIVE,
-        acceptedAt: today,
-      },
+    const [admin, manager, analyst] = await Promise.all([
+      tx.user.create({
+        data: {
+          fullName: 'Olivia Davis',
+          email: 'olivia@peakperformance.local',
+          passwordHash: await hash(demoOwnerPassword, 12),
+        },
+      }),
+      tx.user.create({
+        data: {
+          fullName: 'Michael Osei',
+          email: 'michael@peakperformance.local',
+          passwordHash: await hash(demoOwnerPassword, 12),
+        },
+      }),
+      tx.user.create({
+        data: {
+          fullName: 'Sophia Ahmed',
+          email: 'sophia@peakperformance.local',
+          passwordHash: await hash(demoOwnerPassword, 12),
+        },
+      }),
+    ]);
+
+    await tx.organizationMembership.createMany({
+      data: [
+        {
+          organizationId: organization.id,
+          userId: owner.id,
+          role: OrganizationRole.OWNER,
+          status: OrganizationMembershipStatus.ACTIVE,
+          acceptedAt: today,
+        },
+        {
+          organizationId: organization.id,
+          userId: admin.id,
+          role: OrganizationRole.ADMIN,
+          status: OrganizationMembershipStatus.ACTIVE,
+          acceptedAt: today,
+        },
+        {
+          organizationId: organization.id,
+          userId: manager.id,
+          role: OrganizationRole.STAFF,
+          status: OrganizationMembershipStatus.ACTIVE,
+          acceptedAt: today,
+        },
+        {
+          organizationId: organization.id,
+          userId: analyst.id,
+          role: OrganizationRole.STAFF,
+          status: OrganizationMembershipStatus.ACTIVE,
+          acceptedAt: today,
+        },
+      ],
     });
 
     const planRows = [
@@ -502,6 +1060,13 @@ async function main() {
       });
       plans.set(plan.name, created);
     }
+
+    const workflowDefinitions = await seedWorkflowDefinitions(
+      tx,
+      organization.id,
+      { owner, admin, manager, analyst },
+      today,
+    );
 
     for (const [index, demoMember] of demoMembers.entries()) {
       const plan = plans.get(demoMember.planName);
@@ -671,16 +1236,38 @@ async function main() {
                 demoMember.notes?.includes('Reactivated')
               ? WorkflowType.REACTIVATION
               : WorkflowType.OVERDUE_RECOVERY;
+        const workflowDefinitionKey =
+          demoMember.status === MemberStatus.EXPIRING
+            ? 'active-renewal'
+            : demoMember.status === MemberStatus.OVERDUE
+              ? 'active-overdue'
+              : demoMember.status === MemberStatus.AT_RISK
+                ? index % 2 === 0
+                  ? 'paused-payment-retry'
+                  : 'paused-overdue'
+                : 'active-reactivation';
+        const workflowDefinitionId = workflowDefinitions.get(
+          workflowDefinitionKey,
+        );
+
+        if (!workflowDefinitionId) {
+          throw new Error(`Missing workflow definition ${workflowDefinitionKey}`);
+        }
 
         const workflow = await tx.workflow.create({
           data: {
             organizationId: organization.id,
+            workflowDefinitionId,
             memberId: member.id,
             membershipId: membership.id,
             type: workflowType,
-            status: demoMember.notes?.includes('Reactivated')
-              ? WorkflowStatus.COMPLETED
-              : WorkflowStatus.ACTIVE,
+            status:
+              workflowDefinitionKey.startsWith('paused-') &&
+              !demoMember.notes?.includes('Reactivated')
+                ? WorkflowStatus.PAUSED
+                : demoMember.notes?.includes('Reactivated')
+                  ? WorkflowStatus.COMPLETED
+                  : WorkflowStatus.ACTIVE,
             currentDayOffset:
               workflowType === WorkflowType.RENEWAL_REMINDER ? -3 : 3,
             triggerDate:
@@ -741,6 +1328,24 @@ async function main() {
                 sentAt: step.executedAt,
               },
             });
+
+            if (index % 3 === 0) {
+              await tx.messageLog.create({
+                data: {
+                  organizationId: organization.id,
+                  memberId: member.id,
+                  workflowStepId: step.id,
+                  phoneNumber: member.phoneNumber,
+                  direction: MessageDirection.INBOUND,
+                  content:
+                    demoMember.status === MemberStatus.EXPIRING
+                      ? 'I will renew today.'
+                      : 'Please send payment details.',
+                  status: MessageStatus.DELIVERED,
+                  sentAt: addDays(today, -stepIndex),
+                },
+              });
+            }
 
             await tx.timelineEvent.create({
               data: {
