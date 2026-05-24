@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { Cron } from '@nestjs/schedule';
 import { JobRunStatus, MemberStatus, TaskType } from '@prisma/client';
 import { glitchTipReporter } from '../../lib/monitoring/glitchtip';
 import { PrismaService } from '../database/prisma.service';
@@ -28,12 +29,32 @@ type MemberStateJobError = {
 
 @Injectable()
 export class MemberStateJob {
+  private readonly logger = new Logger(MemberStateJob.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly membershipStateService: MembershipStateService,
     private readonly tasksService: TasksService,
     private readonly timelineService: TimelineService,
   ) {}
+
+  @Cron('0 2 * * *', { timeZone: 'Africa/Lagos' })
+  async runDailyMemberStateSchedule() {
+    const result = await this.run();
+
+    if (result.skipped) {
+      this.logger.log(
+        'Daily member-state update skipped because the lock is held.',
+      );
+      return;
+    }
+
+    this.logger.log(
+      `Daily member-state update finished with status ${
+        result.status ?? 'UNKNOWN'
+      }: ${result.processedCount} processed, ${result.errorCount} errors.`,
+    );
+  }
 
   async run(asOf: Date = new Date()): Promise<MemberStateJobResult> {
     return this.prisma.$transaction(async (tx) => {

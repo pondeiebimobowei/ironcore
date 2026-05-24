@@ -63,6 +63,36 @@ const createJob = (tx: ReturnType<typeof createTransaction>) => {
 };
 
 describe('MemberStateJob', () => {
+  it('runs the existing member-state job from the daily schedule', async () => {
+    const tx = createTransaction();
+    const { job } = createJob(tx);
+    const run = jest.spyOn(job, 'run').mockResolvedValue({
+      skipped: false,
+      processedCount: 2,
+      errorCount: 0,
+      jobRunId: 'job-run-1',
+      status: JobRunStatus.COMPLETED,
+    });
+
+    await job.runDailyMemberStateSchedule();
+
+    expect(run).toHaveBeenCalledWith();
+  });
+
+  it('allows the scheduled member-state job to skip when the lock is held', async () => {
+    const tx = createTransaction();
+    const { job } = createJob(tx);
+    const run = jest.spyOn(job, 'run').mockResolvedValue({
+      skipped: true,
+      processedCount: 0,
+      errorCount: 0,
+    });
+
+    await job.runDailyMemberStateSchedule();
+
+    expect(run).toHaveBeenCalledWith();
+  });
+
   it('skips without creating a job run when the advisory lock is held', async () => {
     const tx = createTransaction();
     tx.$queryRaw.mockReset();
