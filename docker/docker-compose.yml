@@ -1,7 +1,7 @@
 services:
   api:
     build:
-      context: ..
+      context: .
       dockerfile: docker/Dockerfile.api
     container_name: ironcore-retain-api
     restart: unless-stopped
@@ -32,7 +32,7 @@ services:
 
   web:
     build:
-      context: ..
+      context: .
       dockerfile: docker/Dockerfile.web
       args:
         VITE_API_URL: ${VITE_API_URL:-http://localhost:4000}
