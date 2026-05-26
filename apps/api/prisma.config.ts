@@ -2,7 +2,7 @@ import { defineConfig } from "prisma/config";
 
 const databaseUrl =
   process.env.DATABASE_URL ??
-  "postgresql://ironcore:ironcore@localhost:5432/ironcore";
+  "postgresql://ironcore:ironcore@localhost:5433/ironcore";
 
 export default defineConfig({
   schema: "prisma/schema.prisma",

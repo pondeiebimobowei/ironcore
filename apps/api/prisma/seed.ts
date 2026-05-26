@@ -40,7 +40,7 @@ const taskPriorities: Record<TaskType, TaskPriority> = {
 
 const connectionString =
   process.env.DATABASE_URL ??
-  'postgresql://ironcore:ironcore@localhost:5432/ironcore';
+  'postgresql://ironcore:ironcore@localhost:5433/ironcore';
 const adapter = new PrismaPg({ connectionString });
 const prisma = new PrismaClient({ adapter });
 
