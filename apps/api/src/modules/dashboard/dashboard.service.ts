@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import {
   MemberStatus,
   PaymentStatus,
+  Prisma,
   TaskType,
   TaskStatus,
   TimelineEventType,
@@ -9,6 +10,7 @@ import {
   WorkflowType,
 } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
+import { TenantPrismaService } from '../database/tenant-prisma.service';
 
 type DashboardSummary = {
   revenueAtRisk: number;
@@ -112,12 +114,76 @@ const recoveryTaskTypes = [
 
 @Injectable()
 export class DashboardService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly tenantPrisma: TenantPrismaService,
+  ) {}
 
   async summary(organizationId: string): Promise<DashboardSummary> {
+    this.tenantPrisma.assertOrganizationAccess(organizationId);
+
     const today = this.startOfDay(new Date());
     const endDate = today;
     const startDate = this.addDays(endDate, -6);
+    const reactivatedWorkflowQuery =
+      Prisma.validator<Prisma.WorkflowFindManyArgs>()({
+        where: {
+          type: WorkflowType.REACTIVATION,
+          status: WorkflowStatus.COMPLETED,
+        },
+        distinct: ['memberId'],
+        select: { memberId: true },
+      });
+    const topRiskMembersQuery = Prisma.validator<Prisma.MemberFindManyArgs>()({
+      where: {
+        deletedAt: null,
+        status: {
+          in: [
+            MemberStatus.OVERDUE,
+            MemberStatus.AT_RISK,
+            MemberStatus.EXPIRING,
+          ],
+        },
+      },
+      orderBy: [{ updatedAt: 'desc' }],
+      take: 5,
+      include: {
+        memberships: {
+          orderBy: { expiryDate: 'desc' },
+          take: 1,
+          select: { amount: true, expiryDate: true },
+        },
+      },
+    });
+    const recentEventsQuery =
+      Prisma.validator<Prisma.TimelineEventFindManyArgs>()({
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+        include: { member: true },
+      });
+    const statusGroupsQuery = Prisma.validator<Prisma.MemberGroupByArgs>()({
+      by: ['status'],
+      where: { deletedAt: null },
+      _count: { status: true },
+    });
+    const queueTasksQuery = Prisma.validator<Prisma.TaskFindManyArgs>()({
+      where: {
+        status: { in: [TaskStatus.OPEN, TaskStatus.IN_PROGRESS] },
+      },
+      orderBy: [{ dueDate: 'asc' }, { createdAt: 'desc' }],
+      take: 8,
+      include: {
+        member: {
+          include: {
+            memberships: {
+              orderBy: { expiryDate: 'desc' },
+              take: 1,
+              select: { amount: true, expiryDate: true },
+            },
+          },
+        },
+      },
+    });
     const [
       atRiskMembers,
       overdueMembers,
@@ -135,136 +201,97 @@ export class DashboardService {
       recoveryTasksCount,
       pendingPaymentVerificationCount,
     ] = await Promise.all([
-      this.membersWithLatestMembership(organizationId, [MemberStatus.AT_RISK]),
-      this.membersWithLatestMembership(organizationId, [MemberStatus.OVERDUE]),
-      this.prisma.member.count({
-        where: {
-          organizationId,
-          deletedAt: null,
-          status: MemberStatus.EXPIRING,
-        },
-      }),
-      this.prisma.member.count({
-        where: {
-          organizationId,
-          deletedAt: null,
-          status: MemberStatus.OVERDUE,
-        },
-      }),
-      this.prisma.payment.findMany({
-        where: {
-          organizationId,
-          status: PaymentStatus.VERIFIED,
-          verifiedAt: {
-            gte: startDate,
-            lte: this.endOfDay(endDate),
-          },
-        },
-        select: {
-          amountExpected: true,
-          amountPaid: true,
-          verifiedAt: true,
-        },
-      }),
-      this.prisma.membership.findMany({
-        where: {
-          organizationId,
-          member: {
+      this.membersWithLatestMembership([MemberStatus.AT_RISK]),
+      this.membersWithLatestMembership([MemberStatus.OVERDUE]),
+      this.prisma.member.count(
+        this.tenantPrisma.scoped<Prisma.MemberCountArgs>({
+          where: {
             deletedAt: null,
-            status: {
-              in: [MemberStatus.OVERDUE, MemberStatus.AT_RISK],
+            status: MemberStatus.EXPIRING,
+          },
+        }),
+      ),
+      this.prisma.member.count(
+        this.tenantPrisma.scoped<Prisma.MemberCountArgs>({
+          where: {
+            deletedAt: null,
+            status: MemberStatus.OVERDUE,
+          },
+        }),
+      ),
+      this.prisma.payment.findMany(
+        this.tenantPrisma.scoped<Prisma.PaymentFindManyArgs>({
+          where: {
+            status: PaymentStatus.VERIFIED,
+            verifiedAt: {
+              gte: startDate,
+              lte: this.endOfDay(endDate),
             },
           },
-          expiryDate: {
-            lte: endDate,
+          select: {
+            amountExpected: true,
+            amountPaid: true,
+            verifiedAt: true,
           },
-        },
-        select: {
-          amount: true,
-          expiryDate: true,
-        },
-      }),
-      this.prisma.workflow.findMany({
-        where: {
-          organizationId,
-          type: WorkflowType.REACTIVATION,
-          status: WorkflowStatus.COMPLETED,
-        },
-        distinct: ['memberId'],
-        select: { memberId: true },
-      }),
-      this.prisma.task.count({
-        where: {
-          organizationId,
-          status: TaskStatus.OPEN,
-        },
-      }),
-      this.prisma.member.count({ where: { organizationId, deletedAt: null } }),
-      this.prisma.member.findMany({
-        where: {
-          organizationId,
-          deletedAt: null,
-          status: {
-            in: [
-              MemberStatus.OVERDUE,
-              MemberStatus.AT_RISK,
-              MemberStatus.EXPIRING,
-            ],
-          },
-        },
-        orderBy: [{ updatedAt: 'desc' }],
-        take: 5,
-        include: {
-          memberships: {
-            orderBy: { expiryDate: 'desc' },
-            take: 1,
-            select: { amount: true, expiryDate: true },
-          },
-        },
-      }),
-      this.prisma.timelineEvent.findMany({
-        where: { organizationId },
-        orderBy: { createdAt: 'desc' },
-        take: 5,
-        include: { member: true },
-      }),
-      this.prisma.member.groupBy({
-        by: ['status'],
-        where: { organizationId, deletedAt: null },
-        _count: { status: true },
-      }),
-      this.prisma.task.findMany({
-        where: {
-          organizationId,
-          status: { in: [TaskStatus.OPEN, TaskStatus.IN_PROGRESS] },
-        },
-        orderBy: [{ dueDate: 'asc' }, { createdAt: 'desc' }],
-        take: 8,
-        include: {
-          member: {
-            include: {
-              memberships: {
-                orderBy: { expiryDate: 'desc' },
-                take: 1,
-                select: { amount: true, expiryDate: true },
+        }),
+      ),
+      this.prisma.membership.findMany(
+        this.tenantPrisma.scoped<Prisma.MembershipFindManyArgs>({
+          where: {
+            member: {
+              deletedAt: null,
+              status: {
+                in: [MemberStatus.OVERDUE, MemberStatus.AT_RISK],
               },
             },
+            expiryDate: {
+              lte: endDate,
+            },
           },
-        },
-      }),
-      this.prisma.task.count({
-        where: {
-          organizationId,
-          type: { in: recoveryTaskTypes },
-          status: { in: [TaskStatus.OPEN, TaskStatus.IN_PROGRESS] },
-        },
-      }),
-      this.prisma.payment.count({
-        where: {
-          organizationId,
-          status: PaymentStatus.PENDING_VERIFICATION,
-        },
-      }),
+          select: {
+            amount: true,
+            expiryDate: true,
+          },
+        }),
+      ),
+      this.prisma.workflow.findMany(
+        this.tenantPrisma.scoped(reactivatedWorkflowQuery),
+      ),
+      this.prisma.task.count(
+        this.tenantPrisma.scoped<Prisma.TaskCountArgs>({
+          where: {
+            status: TaskStatus.OPEN,
+          },
+        }),
+      ),
+      this.prisma.member.count(
+        this.tenantPrisma.scoped<Prisma.MemberCountArgs>({
+          where: { deletedAt: null },
+        }),
+      ),
+      this.prisma.member.findMany(
+        this.tenantPrisma.scoped(topRiskMembersQuery),
+      ),
+      this.prisma.timelineEvent.findMany(
+        this.tenantPrisma.scoped(recentEventsQuery),
+      ),
+      this.prisma.member.groupBy(this.tenantPrisma.scoped(statusGroupsQuery)),
+      this.prisma.task.findMany(this.tenantPrisma.scoped(queueTasksQuery)),
+      this.prisma.task.count(
+        this.tenantPrisma.scoped<Prisma.TaskCountArgs>({
+          where: {
+            type: { in: recoveryTaskTypes },
+            status: { in: [TaskStatus.OPEN, TaskStatus.IN_PROGRESS] },
+          },
+        }),
+      ),
+      this.prisma.payment.count(
+        this.tenantPrisma.scoped<Prisma.PaymentCountArgs>({
+          where: {
+            status: PaymentStatus.PENDING_VERIFICATION,
+          },
+        }),
+      ),
     ]);
 
     const revenueAtRisk = this.sumLatestMembershipAmounts(atRiskMembers);
@@ -355,12 +382,10 @@ export class DashboardService {
   }
 
   private membersWithLatestMembership(
-    organizationId: string,
     statuses: MemberStatus[],
-  ) {
-    return this.prisma.member.findMany({
+  ): Promise<MemberWithLatestMembership[]> {
+    const query = Prisma.validator<Prisma.MemberFindManyArgs>()({
       where: {
-        organizationId,
         deletedAt: null,
         status: { in: statuses },
       },
@@ -372,6 +397,8 @@ export class DashboardService {
         },
       },
     });
+
+    return this.prisma.member.findMany(this.tenantPrisma.scoped(query));
   }
 
   private sumLatestMembershipAmounts(members: MemberWithLatestMembership[]) {

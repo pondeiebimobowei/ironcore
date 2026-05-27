@@ -12,6 +12,7 @@ import {
   TimelineEventType,
 } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
+import { TenantPrismaService } from '../database/tenant-prisma.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 
@@ -51,20 +52,26 @@ const generatedTaskPriorities: Record<TaskType, TaskPriority> = {
 
 @Injectable()
 export class TasksService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly tenantPrisma: TenantPrismaService,
+  ) {}
 
   list(organizationId: string, query: ListTasksQuery) {
-    return this.prisma.task.findMany({
-      where: {
-        organizationId,
-        status: query.status,
-      },
-      orderBy: [{ dueDate: 'asc' }, { createdAt: 'desc' }],
-      include: {
-        member: true,
-        assignedTo: true,
-      },
-    });
+    this.tenantPrisma.assertOrganizationAccess(organizationId);
+
+    return this.prisma.task.findMany(
+      this.tenantPrisma.scoped<Prisma.TaskFindManyArgs>({
+        where: {
+          status: query.status,
+        },
+        orderBy: [{ dueDate: 'asc' }, { createdAt: 'desc' }],
+        include: {
+          member: true,
+          assignedTo: true,
+        },
+      }),
+    );
   }
 
   listOpenTasks(organizationId: string) {
@@ -119,11 +126,15 @@ export class TasksService {
   }
 
   async create(organizationId: string, dto: CreateTaskDto) {
+    this.tenantPrisma.assertOrganizationAccess(organizationId);
+
     const [member, assignedToId] = await Promise.all([
-      this.prisma.member.findFirst({
-        where: { id: dto.memberId, organizationId, deletedAt: null },
-        select: { id: true },
-      }),
+      this.prisma.member.findFirst(
+        this.tenantPrisma.scoped<Prisma.MemberFindFirstArgs>({
+          where: { id: dto.memberId, deletedAt: null },
+          select: { id: true },
+        }),
+      ),
       this.validateAssignee(organizationId, dto.assignedToId),
     ]);
 
@@ -167,6 +178,7 @@ export class TasksService {
   }
 
   async update(organizationId: string, taskId: string, dto: UpdateTaskDto) {
+    this.tenantPrisma.assertOrganizationAccess(organizationId);
     const existingTask = await this.get(organizationId, taskId);
     const assignedToId = await this.validateAssignee(
       organizationId,
@@ -214,18 +226,21 @@ export class TasksService {
     organizationId: string,
     assignedToId?: string,
   ) {
+    this.tenantPrisma.assertOrganizationAccess(organizationId);
+
     if (!assignedToId) {
       return undefined;
     }
 
-    const membership = await this.prisma.organizationMembership.findFirst({
-      where: {
-        organizationId,
-        userId: assignedToId,
-        status: OrganizationMembershipStatus.ACTIVE,
-      },
-      select: { id: true },
-    });
+    const membership = await this.prisma.organizationMembership.findFirst(
+      this.tenantPrisma.scoped<Prisma.OrganizationMembershipFindFirstArgs>({
+        where: {
+          userId: assignedToId,
+          status: OrganizationMembershipStatus.ACTIVE,
+        },
+        select: { id: true },
+      }),
+    );
 
     if (!membership) {
       throw new BadRequestException(
@@ -253,13 +268,17 @@ export class TasksService {
   }
 
   private async get(organizationId: string, taskId: string) {
-    const task = await this.prisma.task.findFirst({
-      where: { id: taskId, organizationId },
-      include: {
-        member: true,
-        assignedTo: true,
-      },
-    });
+    this.tenantPrisma.assertOrganizationAccess(organizationId);
+
+    const task = await this.prisma.task.findFirst(
+      this.tenantPrisma.scoped<Prisma.TaskFindFirstArgs>({
+        where: { id: taskId },
+        include: {
+          member: true,
+          assignedTo: true,
+        },
+      }),
+    );
 
     if (!task) {
       throw new NotFoundException('Task not found');

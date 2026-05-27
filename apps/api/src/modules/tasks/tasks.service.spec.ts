@@ -11,6 +11,10 @@ import { PrismaService } from '../database/prisma.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { TasksService } from './tasks.service';
 
+type ScopedArgs = {
+  where?: Record<string, unknown>;
+} & Record<string, unknown>;
+
 function createService() {
   const tx = {
     task: {
@@ -45,19 +49,31 @@ function createService() {
         member: { id: 'member-1' },
         assignedTo: { id: 'user-1', email: 'owner@example.com' },
       }),
+      findMany: jest.fn().mockResolvedValue([]),
       update: jest.fn(),
     },
     $transaction: jest.fn((callback) => callback(tx)),
   } as unknown as PrismaService;
+  const tenantPrisma = {
+    assertOrganizationAccess: jest.fn(),
+    scoped: jest.fn((args: ScopedArgs) => ({
+      ...args,
+      where: {
+        ...(args.where ?? {}),
+        organizationId: 'org-1',
+      },
+    })),
+  };
 
   return {
-    service: new TasksService(prisma),
+    service: new TasksService(prisma, tenantPrisma as never),
     prisma: prisma as unknown as {
       member: { findFirst: jest.Mock };
       organizationMembership: { findFirst: jest.Mock };
-      task: { findFirst: jest.Mock };
+      task: { findFirst: jest.Mock; findMany: jest.Mock };
       $transaction: jest.Mock;
     },
+    tenantPrisma: tenantPrisma,
     tx,
   };
 }
@@ -79,9 +95,9 @@ describe('TasksService', () => {
 
     expect(prisma.organizationMembership.findFirst).toHaveBeenCalledWith({
       where: {
-        organizationId: 'org-1',
         userId: 'user-1',
         status: OrganizationMembershipStatus.ACTIVE,
+        organizationId: 'org-1',
       },
       select: { id: true },
     });

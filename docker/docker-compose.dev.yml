@@ -1,23 +1,49 @@
 services:
   api:
+    build:
+        context: ..
+        dockerfile: docker/Dockerfile.api.dev
+    ports:
+      - "4000:4000"
+
     volumes:
-      - ../apps/api:/app
-      - /app/node_modules
-    command: npm run dev
+      - ../:/app
+      - api_node_modules:/app/node_modules
+    command: npm run dev --workspace=apps/api
     environment:
       NODE_ENV: development
+      DATABASE_URL: postgresql://ironcore:ironcore@db:5432/ironcore
 
   web:
     build:
       context: ..
-      dockerfile: docker/Dockerfile.web
+      dockerfile: docker/Dockerfile.web.dev
     ports:
-      - "${WEB_PORT:-8080}:5173"
+      - "${WEB_PORT:-5173}:5173"
     volumes:
-      - ../apps/web:/app
-      - /app/node_modules
+      - ../apps/web:/app/apps/web
+      - web_node_modules:/app/node_modules
     environment:
       VITE_API_URL: http://localhost:4000
       CHOKIDAR_USEPOLLING: "true"
       WATCHPACK_POLLING: "true"
     command: npm run dev -- --host 0.0.0.0
+
+  db:
+    image: postgres:16-alpine
+
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-ironcore}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ironcore}
+      POSTGRES_DB: ${POSTGRES_DB:-ironcore}
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
+  api_node_modules:
+  web_node_modules:

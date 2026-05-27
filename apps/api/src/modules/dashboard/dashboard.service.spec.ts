@@ -15,6 +15,10 @@ type TaskCountQuery = {
   };
 };
 
+type ScopedArgs = {
+  where?: Record<string, unknown>;
+} & Record<string, unknown>;
+
 function createService() {
   const prisma = {
     member: {
@@ -40,14 +44,25 @@ function createService() {
       findMany: jest.fn().mockResolvedValue([]),
     },
   } as unknown as PrismaService;
+  const tenantPrisma = {
+    assertOrganizationAccess: jest.fn(),
+    scoped: jest.fn((args: ScopedArgs) => ({
+      ...args,
+      where: {
+        ...(args.where ?? {}),
+        organizationId: 'org-1',
+      },
+    })),
+  };
 
   return {
-    service: new DashboardService(prisma),
+    service: new DashboardService(prisma, tenantPrisma as never),
     prisma: prisma as unknown as {
       payment: { count: jest.Mock; findMany: jest.Mock };
       membership: { findMany: jest.Mock };
       task: { count: jest.Mock; findMany: jest.Mock };
     },
+    tenantPrisma: tenantPrisma,
   };
 }
 
