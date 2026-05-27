@@ -278,4 +278,60 @@ describe('MemberStateJob', () => {
       }),
     });
   });
+
+  it('preserves organization ids per member when processing multiple tenants in one run', async () => {
+    const tx = createTransaction();
+    tx.member.findMany.mockResolvedValue([
+      {
+        id: 'member-1',
+        organizationId: 'org-1',
+        status: MemberStatus.ACTIVE,
+        memberships: [],
+        payments: [],
+      },
+      {
+        id: 'member-2',
+        organizationId: 'org-2',
+        status: MemberStatus.ACTIVE,
+        memberships: [],
+        payments: [],
+      },
+    ]);
+    const { job, membershipStateService, tasksService } = createJob(tx);
+    membershipStateService.calculateMemberStatus
+      .mockReturnValueOnce(MemberStatus.OVERDUE)
+      .mockReturnValueOnce(MemberStatus.AT_RISK);
+
+    await expect(job.run(asOf)).resolves.toMatchObject({
+      skipped: false,
+      processedCount: 2,
+      errorCount: 0,
+      status: JobRunStatus.COMPLETED,
+    });
+
+    expect(tasksService.ensureOpenTask).toHaveBeenNthCalledWith(1, {
+      tx,
+      organizationId: 'org-1',
+      memberId: 'member-1',
+      type: TaskType.RESOLVE_OVERDUE_STATUS,
+      dueDate: asOf,
+      source: 'member-state-update',
+      metadata: {
+        status: MemberStatus.OVERDUE,
+        jobRunId: 'job-run-1',
+      },
+    });
+    expect(tasksService.ensureOpenTask).toHaveBeenNthCalledWith(2, {
+      tx,
+      organizationId: 'org-2',
+      memberId: 'member-2',
+      type: TaskType.REVIEW_AT_RISK_MEMBER,
+      dueDate: asOf,
+      source: 'member-state-update',
+      metadata: {
+        status: MemberStatus.AT_RISK,
+        jobRunId: 'job-run-1',
+      },
+    });
+  });
 });

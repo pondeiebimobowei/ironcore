@@ -1,6 +1,14 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-import { MembershipStatus, TimelineEventType } from '@prisma/client';
+import {
+  MemberStatus,
+  MembershipStatus,
+  TaskType,
+  TimelineEventType,
+} from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
+import { MembershipStateService } from '../memberships/membership-state.service';
+import { TasksService } from '../tasks/tasks.service';
+import { TimelineService } from '../timeline/timeline.service';
 import { MembersService } from './members.service';
 
 type ScopedArgs = {
@@ -14,6 +22,8 @@ function createTransaction() {
     },
     member: {
       create: jest.fn().mockResolvedValue({ id: 'member-1' }),
+      findMany: jest.fn().mockResolvedValue([]),
+      update: jest.fn().mockResolvedValue({ id: 'member-1' }),
     },
     plan: {
       findFirst: jest.fn().mockResolvedValue(null),
@@ -25,9 +35,18 @@ function createTransaction() {
     },
     membership: {
       create: jest.fn().mockResolvedValue({ id: 'membership-1' }),
+      update: jest.fn().mockResolvedValue({ id: 'membership-1' }),
     },
     timelineEvent: {
       createMany: jest.fn(),
+      create: jest.fn(),
+    },
+    task: {
+      findFirst: jest.fn().mockResolvedValue(null),
+      create: jest.fn().mockResolvedValue({
+        id: 'task-1',
+        type: TaskType.RESOLVE_OVERDUE_STATUS,
+      }),
     },
   };
 }
@@ -52,14 +71,35 @@ function createService(tx = createTransaction()) {
       },
     })),
   };
+  const membershipStateService = {
+    calculateMembershipStatus: jest.fn(
+      (membership: { status: MembershipStatus }) => membership.status,
+    ),
+    calculateMemberStatus: jest.fn(() => MemberStatus.ACTIVE),
+  } as unknown as jest.Mocked<MembershipStateService>;
+  const tasksService = {
+    ensureOpenTask: jest.fn().mockResolvedValue({ id: 'task-1' }),
+  } as unknown as jest.Mocked<TasksService>;
+  const timelineService = {
+    logMemberStatusChanged: jest.fn().mockResolvedValue({ id: 'event-1' }),
+  } as unknown as jest.Mocked<TimelineService>;
 
   return {
-    service: new MembersService(prisma, tenantPrisma as never),
+    service: new MembersService(
+      prisma,
+      tenantPrisma as never,
+      membershipStateService,
+      tasksService,
+      timelineService,
+    ),
     prisma: prisma as unknown as {
       member: { findFirst: jest.Mock; findMany: jest.Mock };
       $transaction: jest.Mock;
     },
     tenantPrisma,
+    membershipStateService,
+    tasksService,
+    timelineService,
     tx,
   };
 }
@@ -152,5 +192,88 @@ describe('MembersService import', () => {
         amount: '30000',
       }),
     });
+  });
+
+  it('refreshes imported member risk immediately after confirm import', async () => {
+    const tx = createTransaction();
+    tx.member.findMany.mockResolvedValue([
+      {
+        id: 'member-1',
+        organizationId: 'org-1',
+        status: MemberStatus.ACTIVE,
+        memberships: [
+          {
+            id: 'membership-1',
+            expiryDate: new Date('2026-05-18T00:00:00.000Z'),
+            status: MembershipStatus.ACTIVE,
+          },
+        ],
+        payments: [],
+      },
+    ]);
+    const {
+      service,
+      membershipStateService,
+      tasksService,
+      timelineService,
+      tx: transaction,
+    } = createService(tx);
+    membershipStateService.calculateMembershipStatus.mockReturnValue(
+      MembershipStatus.EXPIRED,
+    );
+    membershipStateService.calculateMemberStatus.mockReturnValue(
+      MemberStatus.OVERDUE,
+    );
+
+    await expect(
+      service.confirmImport('org-1', {
+        rows: [
+          {
+            firstName: 'Ada',
+            phoneNumber: '+2348012345678',
+            planName: 'Monthly',
+            membershipAmount: '25000',
+            expiryDate: '2026-05-18',
+          },
+        ],
+      }),
+    ).resolves.toEqual({
+      createdCount: 1,
+      updatedCount: 0,
+      skippedCount: 0,
+      errors: [],
+    });
+
+    expect(transaction.membership.update).toHaveBeenCalledWith({
+      where: { id: 'membership-1' },
+      data: { status: MembershipStatus.EXPIRED },
+    });
+    expect(transaction.member.update).toHaveBeenCalledWith({
+      where: { id: 'member-1' },
+      data: { status: MemberStatus.OVERDUE },
+    });
+    expect(timelineService.logMemberStatusChanged.mock.calls[0]).toEqual([
+      {
+        tx: transaction,
+        organizationId: 'org-1',
+        memberId: 'member-1',
+        previousStatus: MemberStatus.ACTIVE,
+        nextStatus: MemberStatus.OVERDUE,
+        source: 'member-import-refresh',
+      },
+    ]);
+    expect(tasksService.ensureOpenTask.mock.calls[0]).toEqual([
+      {
+        tx: transaction,
+        organizationId: 'org-1',
+        memberId: 'member-1',
+        type: TaskType.RESOLVE_OVERDUE_STATUS,
+        dueDate: expect.any(Date),
+        source: 'member-import-refresh',
+        metadata: {
+          status: MemberStatus.OVERDUE,
+        },
+      },
+    ]);
   });
 });

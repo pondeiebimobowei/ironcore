@@ -7,10 +7,14 @@ import {
   MemberStatus,
   MembershipStatus,
   Prisma,
+  TaskType,
   TimelineEventType,
 } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { TenantPrismaService } from '../database/tenant-prisma.service';
+import { MembershipStateService } from '../memberships/membership-state.service';
+import { TasksService } from '../tasks/tasks.service';
+import { TimelineService } from '../timeline/timeline.service';
 import { CreateMemberDto } from './dto/create-member.dto';
 import {
   ConfirmImportDto,
@@ -50,11 +54,16 @@ type ImportMembershipResult = {
   membershipId: string;
 };
 
+const IMPORT_MEMBER_STATE_SOURCE = 'member-import-refresh';
+
 @Injectable()
 export class MembersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly tenantPrisma: TenantPrismaService,
+    private readonly membershipStateService: MembershipStateService,
+    private readonly tasksService: TasksService,
+    private readonly timelineService: TimelineService,
   ) {}
 
   async list(organizationId: string, query: ListMembersQuery) {
@@ -300,6 +309,12 @@ export class MembersService {
         ],
       });
 
+      await this.refreshImportedMemberStates(
+        tx,
+        organizationId,
+        members.map((member) => member.id),
+      );
+
       return members;
     });
 
@@ -457,6 +472,11 @@ export class MembersService {
           })),
         ],
       });
+
+      await this.refreshImportedMemberStates(tx, organizationId, [
+        ...createdMembers.map((member) => member.id),
+        ...updatedMembers.map((member) => member.id),
+      ]);
 
       return {
         createdCount: createdMembers.length,
@@ -689,6 +709,98 @@ export class MembersService {
     return results;
   }
 
+  private async refreshImportedMemberStates(
+    tx: Prisma.TransactionClient,
+    organizationId: string,
+    memberIds: string[],
+    asOf: Date = new Date(),
+  ) {
+    if (memberIds.length === 0) {
+      return;
+    }
+
+    const members = await tx.member.findMany({
+      where: {
+        organizationId,
+        id: { in: memberIds },
+        deletedAt: null,
+      },
+      include: {
+        memberships: true,
+        payments: {
+          select: {
+            membershipId: true,
+            status: true,
+            verifiedAt: true,
+          },
+        },
+      },
+    });
+
+    for (const member of members) {
+      const memberships = member.memberships.map((membership) => ({
+        ...membership,
+        status: this.membershipStateService.calculateMembershipStatus(
+          membership,
+          asOf,
+        ),
+      }));
+      const targetMemberStatus =
+        this.membershipStateService.calculateMemberStatus(
+          {
+            currentStatus: member.status,
+            memberships,
+            payments: member.payments,
+          },
+          asOf,
+        );
+
+      for (const membership of memberships) {
+        const currentMembership = member.memberships.find(
+          (candidate) => candidate.id === membership.id,
+        );
+
+        if (currentMembership?.status !== membership.status) {
+          await tx.membership.update({
+            where: { id: membership.id },
+            data: { status: membership.status },
+          });
+        }
+      }
+
+      if (member.status !== targetMemberStatus) {
+        await tx.member.update({
+          where: { id: member.id },
+          data: { status: targetMemberStatus },
+        });
+        await this.timelineService.logMemberStatusChanged({
+          tx,
+          organizationId,
+          memberId: member.id,
+          previousStatus: member.status,
+          nextStatus: targetMemberStatus,
+          source: IMPORT_MEMBER_STATE_SOURCE,
+        });
+      }
+
+      const taskType = this.taskTypeForMemberStatus(targetMemberStatus);
+
+      if (taskType) {
+        await this.tasksService.ensureOpenTask({
+          tx,
+          organizationId,
+          memberId: member.id,
+          type: taskType,
+          dueDate: asOf,
+          source: IMPORT_MEMBER_STATE_SOURCE,
+          metadata: {
+            status: targetMemberStatus,
+          },
+        });
+      }
+    }
+  }
+
   private async findOrCreateImportPlan(
     tx: Prisma.TransactionClient,
     organizationId: string,
@@ -718,5 +830,21 @@ export class MembersService {
     const startDate = new Date(expiryDate);
     startDate.setDate(startDate.getDate() - 30);
     return startDate;
+  }
+
+  private taskTypeForMemberStatus(status: MemberStatus) {
+    if (status === MemberStatus.OVERDUE) {
+      return TaskType.RESOLVE_OVERDUE_STATUS;
+    }
+
+    if (status === MemberStatus.AT_RISK) {
+      return TaskType.REVIEW_AT_RISK_MEMBER;
+    }
+
+    if (status === MemberStatus.CHURNED) {
+      return TaskType.REACTIVATION;
+    }
+
+    return null;
   }
 }
