@@ -1,4 +1,4 @@
-import { randomUUID } from 'crypto';
+import * as Sentry from '@sentry/node';
 
 type GlitchTipContext = {
   level?: 'error' | 'warning' | 'info';
@@ -7,129 +7,80 @@ type GlitchTipContext = {
   extra?: Record<string, unknown>;
 };
 
-type ParsedDsn = {
-  dsn: string;
-  endpoint: string;
-};
-
 export class GlitchTipReporter {
-  private readonly parsedDsn?: ParsedDsn;
-  private readonly environment: string;
-
-  constructor(params: { dsn?: string; environment?: string }) {
-    this.parsedDsn = params.dsn ? this.parseDsn(params.dsn) : undefined;
-    this.environment = params.environment ?? 'development';
-  }
-
   captureException(error: unknown, context: GlitchTipContext = {}) {
-    if (!this.parsedDsn) {
-      return;
-    }
+    Sentry.withScope((scope) => {
+      scope.setLevel(context.level ?? 'error');
+      scope.setTag('logger', 'ironcore-api');
 
-    const exception = this.exceptionFrom(error);
-    const event = {
-      event_id: this.eventId(),
-      timestamp: Date.now() / 1000,
-      platform: 'node',
-      environment: this.environment,
-      level: context.level ?? 'error',
-      logger: 'ironcore-api',
-      exception: {
-        values: [
-          {
-            type: exception.name,
-            value: exception.message,
-            stacktrace: exception.stack
-              ? { frames: this.stackFrames(exception.stack) }
-              : undefined,
-            mechanism: {
-              type: context.mechanism ?? 'generic',
-              handled: true,
-            },
-          },
-        ],
-      },
-      tags: context.tags,
-      extra: context.extra,
-    };
-
-    void this.sendEnvelope(event);
-  }
-
-  private async sendEnvelope(event: Record<string, unknown>) {
-    if (!this.parsedDsn) {
-      return;
-    }
-
-    const envelope = [
-      JSON.stringify({
-        event_id: event.event_id,
-        dsn: this.parsedDsn.dsn,
-        sent_at: new Date().toISOString(),
-      }),
-      JSON.stringify({ type: 'event' }),
-      JSON.stringify(event),
-    ].join('\n');
-
-    await fetch(this.parsedDsn.endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-sentry-envelope' },
-      body: envelope,
-    }).catch(() => undefined);
-  }
-
-  private parseDsn(dsn: string): ParsedDsn | undefined {
-    try {
-      const url = new URL(dsn);
-      const projectId = url.pathname.replace(/^\/+|\/+$/g, '');
-
-      if (!projectId) {
-        return undefined;
+      if (context.mechanism) {
+        scope.setTag('mechanism', context.mechanism);
       }
 
-      return {
-        dsn,
-        endpoint: `${url.protocol}//${url.host}/api/${projectId}/envelope/`,
-      };
-    } catch {
-      return undefined;
-    }
+      for (const [key, value] of Object.entries(context.tags ?? {})) {
+        if (value !== undefined) {
+          scope.setTag(key, String(value));
+        }
+      }
+
+      for (const [key, value] of Object.entries(context.extra ?? {})) {
+        scope.setExtra(key, value);
+      }
+
+      Sentry.captureException(error);
+    });
   }
 
-  private exceptionFrom(error: unknown) {
-    if (error instanceof Error) {
-      return {
-        name: error.name || 'Error',
-        message: error.message || 'Unknown error',
-        stack: error.stack,
-      };
-    }
+  captureMessage(message: string, context: GlitchTipContext = {}) {
+    Sentry.withScope((scope) => {
+      scope.setLevel(context.level ?? 'info');
+      scope.setTag('logger', 'ironcore-api');
 
-    return {
-      name: 'Error',
-      message:
-        typeof error === 'string' ? error : JSON.stringify(error ?? 'Unknown'),
-      stack: undefined,
-    };
-  }
+      if (context.mechanism) {
+        scope.setTag('mechanism', context.mechanism);
+      }
 
-  private stackFrames(stack: string) {
-    return stack
-      .split('\n')
-      .slice(1, 30)
-      .map((line) => ({ function: line.trim() }))
-      .reverse();
-  }
+      for (const [key, value] of Object.entries(context.tags ?? {})) {
+        if (value !== undefined) {
+          scope.setTag(key, String(value));
+        }
+      }
 
-  private eventId() {
-    return randomUUID().replaceAll('-', '');
+      for (const [key, value] of Object.entries(context.extra ?? {})) {
+        scope.setExtra(key, value);
+      }
+
+      Sentry.captureMessage(message);
+    });
   }
 }
 
-export const glitchTipReporter = new GlitchTipReporter({
-  dsn: process.env.GLITCHTIP_DSN,
-  environment: process.env.NODE_ENV,
-});
+let isGlitchTipInitialized = false;
+
+export function initGlitchTip(params: {
+  dsn?: string;
+  environment?: string;
+  release?: string;
+}) {
+  if (isGlitchTipInitialized || !params.dsn) {
+    return;
+  }
+
+  Sentry.init({
+    dsn: params.dsn,
+    environment: params.environment ?? 'development',
+    release: params.release,
+    tracesSampleRate: Number(
+      process.env.GLITCHTIP_TRACES_SAMPLE_RATE ??
+        process.env.SENTRY_TRACES_SAMPLE_RATE ??
+        0.01,
+    ),
+  });
+
+  isGlitchTipInitialized = true;
+}
+
+export const glitchTipReporter = new GlitchTipReporter();
 
 export function registerGlitchTipProcessHandlers() {
   process.on('uncaughtException', (error) => {

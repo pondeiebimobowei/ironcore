@@ -6,9 +6,15 @@ import { AppModule } from './app.module';
 import { GlitchTipExceptionFilter } from './lib/monitoring/glitchtip-exception.filter';
 import {
   glitchTipReporter,
+  initGlitchTip,
   registerGlitchTipProcessHandlers,
 } from './lib/monitoring/glitchtip';
 
+initGlitchTip({
+  dsn: process.env.GLITCHTIP_DSN,
+  environment: process.env.NODE_ENV,
+  release: process.env.APP_RELEASE ?? process.env.npm_package_version,
+});
 registerGlitchTipProcessHandlers();
 
 async function bootstrap() {
