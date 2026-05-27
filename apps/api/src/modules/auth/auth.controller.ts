@@ -12,6 +12,7 @@ import { AuthRateLimitGuard } from '../../common/guards/auth-rate-limit.guard';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { SignupDto } from './dto/signup.dto';
+import * as Sentry from '@sentry/node';
 
 @Controller('auth')
 export class AuthController {

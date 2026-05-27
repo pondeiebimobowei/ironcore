@@ -12,6 +12,7 @@ services:
     command: npm run dev --workspace=apps/api
     environment:
       NODE_ENV: development
+      GLITCHTIP_DSN: ${GLITCHTIP_DSN:-}
       DATABASE_URL: postgresql://ironcore:ironcore@db:5432/ironcore
 
   web:
@@ -27,6 +28,8 @@ services:
       VITE_API_URL: http://localhost:4000
       CHOKIDAR_USEPOLLING: "true"
       WATCHPACK_POLLING: "true"
+      VITE_GLITCHTIP_DSN: ${VITE_GLITCHTIP_DSN:-}
+
     command: npm run dev -- --host 0.0.0.0
 
   db:

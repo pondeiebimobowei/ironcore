@@ -9,6 +9,7 @@ import {
   initGlitchTip,
   registerGlitchTipProcessHandlers,
 } from './lib/monitoring/glitchtip';
+import * as Sentry from '@sentry/node';
 
 function parseAllowedOrigins() {
   const configuredOrigins =
@@ -24,15 +25,15 @@ function parseAllowedOrigins() {
 
 type CorsOriginCallback = (error: Error | null, allow?: boolean) => void;
 
-initGlitchTip({
-  dsn: process.env.GLITCHTIP_DSN,
-  environment: process.env.NODE_ENV,
-  release: process.env.APP_RELEASE ?? process.env.npm_package_version,
-});
-registerGlitchTipProcessHandlers();
-
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  initGlitchTip({
+    dsn: process.env.GLITCHTIP_DSN,
+    environment: process.env.NODE_ENV,
+    release: process.env.APP_RELEASE ?? process.env.npm_package_version,
+  });
+  registerGlitchTipProcessHandlers();
+  Sentry.setupExpressErrorHandler(app);
   const port = Number(process.env.API_PORT ?? process.env.PORT ?? 4000);
   const allowedOrigins = parseAllowedOrigins();
   const corsOrigin = (
