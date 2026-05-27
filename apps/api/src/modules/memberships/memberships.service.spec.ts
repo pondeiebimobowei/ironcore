@@ -7,6 +7,10 @@ import { PrismaService } from '../database/prisma.service';
 import { TimelineService } from '../timeline/timeline.service';
 import { MembershipsService } from './memberships.service';
 
+type ScopedArgs = {
+  where?: Record<string, unknown>;
+} & Record<string, unknown>;
+
 function createTransaction() {
   return {
     membership: {
@@ -48,6 +52,16 @@ function createService(tx = createTransaction()) {
       handler(tx),
     ),
   } as unknown as PrismaService;
+  const tenantPrisma = {
+    assertOrganizationAccess: jest.fn(),
+    scoped: jest.fn((args: ScopedArgs) => ({
+      ...args,
+      where: {
+        ...(args.where ?? {}),
+        organizationId: 'org-1',
+      },
+    })),
+  };
 
   const timelineService = {
     logMemberStatusChanged: jest.fn((input: { tx: typeof tx }) => {
@@ -69,7 +83,11 @@ function createService(tx = createTransaction()) {
   } as unknown as TimelineService;
 
   return {
-    service: new MembershipsService(prisma, timelineService),
+    service: new MembershipsService(
+      prisma,
+      tenantPrisma as never,
+      timelineService,
+    ),
     prisma: prisma as unknown as {
       membership: { findFirst: jest.Mock };
       member: { findFirst: jest.Mock };
@@ -77,6 +95,7 @@ function createService(tx = createTransaction()) {
       organization: { findUnique: jest.Mock };
       $transaction: jest.Mock;
     },
+    tenantPrisma,
     timelineService: timelineService as unknown as {
       logMemberStatusChanged: jest.Mock;
     },
@@ -86,7 +105,8 @@ function createService(tx = createTransaction()) {
 
 describe('MembershipsService', () => {
   it('logs a member status change in the same transaction when create reactivates a member', async () => {
-    const { service, prisma, timelineService, tx } = createService();
+    const { service, prisma, tenantPrisma, timelineService, tx } =
+      createService();
 
     prisma.member.findFirst.mockResolvedValue({
       id: 'member-1',
@@ -121,10 +141,12 @@ describe('MembershipsService', () => {
       nextStatus: MemberStatus.ACTIVE,
       source: 'membership_created',
     });
+    expect(tenantPrisma.assertOrganizationAccess).toHaveBeenCalledWith('org-1');
   });
 
   it('logs a member status change in the same transaction when renew reactivates a member', async () => {
-    const { service, prisma, timelineService, tx } = createService();
+    const { service, prisma, tenantPrisma, timelineService, tx } =
+      createService();
 
     prisma.membership.findFirst.mockResolvedValue({
       id: 'membership-1',
@@ -154,5 +176,6 @@ describe('MembershipsService', () => {
       nextStatus: MemberStatus.ACTIVE,
       source: 'membership_renewed',
     });
+    expect(tenantPrisma.assertOrganizationAccess).toHaveBeenCalledWith('org-1');
   });
 });

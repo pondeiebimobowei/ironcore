@@ -3,6 +3,10 @@ import { MembershipStatus, TimelineEventType } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { MembersService } from './members.service';
 
+type ScopedArgs = {
+  where?: Record<string, unknown>;
+} & Record<string, unknown>;
+
 function createTransaction() {
   return {
     organization: {
@@ -31,26 +35,38 @@ function createTransaction() {
 function createService(tx = createTransaction()) {
   const prisma = {
     member: {
+      findFirst: jest.fn(),
       findMany: jest.fn().mockResolvedValue([]),
     },
     $transaction: jest.fn((handler: (transaction: typeof tx) => unknown) =>
       handler(tx),
     ),
   } as unknown as PrismaService;
+  const tenantPrisma = {
+    assertOrganizationAccess: jest.fn(),
+    scoped: jest.fn((args: ScopedArgs) => ({
+      ...args,
+      where: {
+        ...(args.where ?? {}),
+        organizationId: 'org-1',
+      },
+    })),
+  };
 
   return {
-    service: new MembersService(prisma),
+    service: new MembersService(prisma, tenantPrisma as never),
     prisma: prisma as unknown as {
-      member: { findMany: jest.Mock };
+      member: { findFirst: jest.Mock; findMany: jest.Mock };
       $transaction: jest.Mock;
     },
+    tenantPrisma,
     tx,
   };
 }
 
 describe('MembersService import', () => {
   it('creates imported members with revenue-bearing memberships and timeline events', async () => {
-    const { service, tx } = createService();
+    const { service, tenantPrisma, tx } = createService();
 
     await expect(
       service.import('org-1', {
@@ -106,6 +122,7 @@ describe('MembersService import', () => {
         }),
       ]),
     });
+    expect(tenantPrisma.assertOrganizationAccess).toHaveBeenCalledWith('org-1');
   });
 
   it('uses an existing imported plan when one already exists', async () => {

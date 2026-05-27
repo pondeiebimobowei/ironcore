@@ -10,6 +10,7 @@ import {
   TimelineEventType,
 } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
+import { TenantPrismaService } from '../database/tenant-prisma.service';
 import { CreateMemberDto } from './dto/create-member.dto';
 import {
   ConfirmImportDto,
@@ -51,60 +52,68 @@ type ImportMembershipResult = {
 
 @Injectable()
 export class MembersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly tenantPrisma: TenantPrismaService,
+  ) {}
 
   async list(organizationId: string, query: ListMembersQuery) {
+    this.tenantPrisma.assertOrganizationAccess(organizationId);
     const search = query.search?.trim();
 
-    return this.prisma.member.findMany({
-      where: {
-        organizationId,
-        deletedAt: null,
-        status: query.status,
-        ...(search
-          ? {
-              OR: [
-                { firstName: { contains: search, mode: 'insensitive' } },
-                { lastName: { contains: search, mode: 'insensitive' } },
-                { phoneNumber: { contains: search, mode: 'insensitive' } },
-                { email: { contains: search, mode: 'insensitive' } },
-              ],
-            }
-          : {}),
-      },
-      orderBy: [{ updatedAt: 'desc' }],
-      include: {
-        memberships: {
-          orderBy: { expiryDate: 'desc' },
-          take: 1,
-          include: { plan: true },
+    return this.prisma.member.findMany(
+      this.tenantPrisma.scoped<Prisma.MemberFindManyArgs>({
+        where: {
+          deletedAt: null,
+          status: query.status,
+          ...(search
+            ? {
+                OR: [
+                  { firstName: { contains: search, mode: 'insensitive' } },
+                  { lastName: { contains: search, mode: 'insensitive' } },
+                  { phoneNumber: { contains: search, mode: 'insensitive' } },
+                  { email: { contains: search, mode: 'insensitive' } },
+                ],
+              }
+            : {}),
         },
-        payments: {
-          orderBy: { submittedAt: 'desc' },
-          take: 1,
+        orderBy: [{ updatedAt: 'desc' }],
+        include: {
+          memberships: {
+            orderBy: { expiryDate: 'desc' },
+            take: 1,
+            include: { plan: true },
+          },
+          payments: {
+            orderBy: { submittedAt: 'desc' },
+            take: 1,
+          },
         },
-      },
-    });
+      }),
+    );
   }
 
   async get(organizationId: string, memberId: string) {
-    const member = await this.prisma.member.findFirst({
-      where: {
-        id: memberId,
-        organizationId,
-        deletedAt: null,
-      },
-      include: {
-        memberships: {
-          orderBy: { expiryDate: 'desc' },
-          include: { plan: true, payments: true },
+    this.tenantPrisma.assertOrganizationAccess(organizationId);
+
+    const member = await this.prisma.member.findFirst(
+      this.tenantPrisma.scoped<Prisma.MemberFindFirstArgs>({
+        where: {
+          id: memberId,
+          deletedAt: null,
         },
-        payments: { orderBy: { submittedAt: 'desc' } },
-        messageLogs: { orderBy: { createdAt: 'desc' }, take: 20 },
-        tasks: { orderBy: { dueDate: 'asc' } },
-        timelineEvents: { orderBy: { createdAt: 'desc' }, take: 30 },
-      },
-    });
+        include: {
+          memberships: {
+            orderBy: { expiryDate: 'desc' },
+            include: { plan: true, payments: true },
+          },
+          payments: { orderBy: { submittedAt: 'desc' } },
+          messageLogs: { orderBy: { createdAt: 'desc' }, take: 20 },
+          tasks: { orderBy: { dueDate: 'asc' } },
+          timelineEvents: { orderBy: { createdAt: 'desc' }, take: 30 },
+        },
+      }),
+    );
 
     if (!member) {
       throw new NotFoundException('Member not found');
@@ -114,6 +123,7 @@ export class MembersService {
   }
 
   async create(organizationId: string, dto: CreateMemberDto) {
+    this.tenantPrisma.assertOrganizationAccess(organizationId);
     await this.ensureUniquePhone(organizationId, dto.phoneNumber);
     const organizationCurrency = dto.expiryDate
       ? await this.organizationCurrency(organizationId)
@@ -171,17 +181,19 @@ export class MembersService {
   }
 
   async update(organizationId: string, memberId: string, dto: UpdateMemberDto) {
+    this.tenantPrisma.assertOrganizationAccess(organizationId);
     await this.get(organizationId, memberId);
 
     if (dto.phoneNumber) {
-      const existing = await this.prisma.member.findFirst({
-        where: {
-          organizationId,
-          phoneNumber: dto.phoneNumber,
-          deletedAt: null,
-          NOT: { id: memberId },
-        },
-      });
+      const existing = await this.prisma.member.findFirst(
+        this.tenantPrisma.scoped<Prisma.MemberFindFirstArgs>({
+          where: {
+            phoneNumber: dto.phoneNumber,
+            deletedAt: null,
+            NOT: { id: memberId },
+          },
+        }),
+      );
 
       if (existing) {
         throw new ConflictException(
@@ -220,6 +232,7 @@ export class MembersService {
   }
 
   async remove(organizationId: string, memberId: string) {
+    this.tenantPrisma.assertOrganizationAccess(organizationId);
     await this.get(organizationId, memberId);
 
     await this.prisma.member.update({
@@ -231,6 +244,7 @@ export class MembersService {
   }
 
   async import(organizationId: string, dto: ImportMembersDto) {
+    this.tenantPrisma.assertOrganizationAccess(organizationId);
     const { validRows, errors, warningRows } = await this.validateImportRows(
       organizationId,
       dto.rows,
@@ -293,6 +307,7 @@ export class MembersService {
   }
 
   async dryRunImport(organizationId: string, dto: ImportMembersDto) {
+    this.tenantPrisma.assertOrganizationAccess(organizationId);
     const { validRows, errorRows, warningRows } = await this.validateImportRows(
       organizationId,
       dto.rows,
@@ -306,6 +321,7 @@ export class MembersService {
   }
 
   async confirmImport(organizationId: string, dto: ConfirmImportDto) {
+    this.tenantPrisma.assertOrganizationAccess(organizationId);
     const report = await this.validateImportRows(organizationId, dto.rows);
 
     if (report.errorRows.length > 0) {
@@ -452,9 +468,11 @@ export class MembersService {
   }
 
   private async ensureUniquePhone(organizationId: string, phoneNumber: string) {
-    const existing = await this.prisma.member.findFirst({
-      where: { organizationId, phoneNumber, deletedAt: null },
-    });
+    const existing = await this.prisma.member.findFirst(
+      this.tenantPrisma.scoped<Prisma.MemberFindFirstArgs>({
+        where: { phoneNumber, deletedAt: null },
+      }),
+    );
 
     if (existing) {
       throw new ConflictException(
@@ -546,23 +564,24 @@ export class MembersService {
       });
     });
 
-    const existingMembers = await this.prisma.member.findMany({
-      where: {
-        organizationId,
-        deletedAt: null,
-        OR: [
-          { phoneNumber: { in: [...phones] } },
-          { email: { in: [...emails] } },
-        ],
-      },
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        phoneNumber: true,
-        email: true,
-      },
-    });
+    const existingMembers = await this.prisma.member.findMany(
+      this.tenantPrisma.scoped<Prisma.MemberFindManyArgs>({
+        where: {
+          deletedAt: null,
+          OR: [
+            { phoneNumber: { in: [...phones] } },
+            { email: { in: [...emails] } },
+          ],
+        },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          phoneNumber: true,
+          email: true,
+        },
+      }),
+    );
     const membersByPhone = new Map(
       existingMembers.map((member) => [member.phoneNumber, member]),
     );

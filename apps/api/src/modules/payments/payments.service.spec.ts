@@ -14,6 +14,10 @@ import { PrismaService } from '../database/prisma.service';
 import { TasksService } from '../tasks/tasks.service';
 import { PaymentsService } from './payments.service';
 
+type ScopedArgs = {
+  where?: Record<string, unknown>;
+} & Record<string, unknown>;
+
 const createTransaction = () => ({
   payment: {
     create: jest.fn(),
@@ -50,6 +54,16 @@ const createService = (tx: ReturnType<typeof createTransaction>) => {
       findMany: jest.fn(),
     },
   } as unknown as PrismaService;
+  const tenantPrisma = {
+    assertOrganizationAccess: jest.fn(),
+    scoped: jest.fn((args: ScopedArgs) => ({
+      ...args,
+      where: {
+        ...(args.where ?? {}),
+        organizationId: 'org-1',
+      },
+    })),
+  };
 
   const tasksService = {
     createGeneratedTask: jest.fn(async (input) => {
@@ -68,13 +82,14 @@ const createService = (tx: ReturnType<typeof createTransaction>) => {
   } as unknown as jest.Mocked<TasksService>;
 
   return {
-    service: new PaymentsService(prisma, tasksService),
+    service: new PaymentsService(prisma, tenantPrisma as never, tasksService),
     prisma: prisma as unknown as {
       member: { findFirst: jest.Mock };
       membership: { findFirst: jest.Mock };
       payment: { findFirst: jest.Mock; findMany: jest.Mock };
       $transaction: jest.Mock;
     },
+    tenantPrisma,
     tasksService,
   };
 };
@@ -86,7 +101,7 @@ describe('PaymentsService', () => {
       id: 'payment-1',
       status: PaymentStatus.PENDING_VERIFICATION,
     });
-    const { service, prisma, tasksService } = createService(tx);
+    const { service, prisma, tasksService, tenantPrisma } = createService(tx);
     prisma.member.findFirst.mockResolvedValue({
       id: 'member-1',
       status: MemberStatus.OVERDUE,
@@ -161,6 +176,7 @@ describe('PaymentsService', () => {
         status: PaymentStatus.PENDING_VERIFICATION,
       },
     });
+    expect(tenantPrisma.assertOrganizationAccess).toHaveBeenCalledWith('org-1');
   });
 
   it('approves a payment, creates a renewal membership, logs events, and completes verification tasks', async () => {

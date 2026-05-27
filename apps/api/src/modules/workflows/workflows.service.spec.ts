@@ -3,6 +3,10 @@ import { WorkflowDefinitionStatus } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { WorkflowsService } from './workflows.service';
 
+type ScopedArgs = {
+  where?: Record<string, unknown>;
+} & Record<string, unknown>;
+
 const createPrisma = () => ({
   workflowDefinition: {
     findMany: jest.fn(),
@@ -19,6 +23,17 @@ const createPrisma = () => ({
   payment: {
     findMany: jest.fn(),
   },
+});
+
+const createTenantPrisma = () => ({
+  assertOrganizationAccess: jest.fn(),
+  scoped: jest.fn((args: ScopedArgs) => ({
+    ...args,
+    where: {
+      ...(args.where ?? {}),
+      organizationId: 'org-1',
+    },
+  })),
 });
 
 const definition = {
@@ -61,8 +76,12 @@ const definition = {
 describe('WorkflowsService', () => {
   it('lists persisted workflow definitions scoped to an organization without fallback data', async () => {
     const prisma = createPrisma();
+    const tenantPrisma = createTenantPrisma();
     prisma.workflowDefinition.findMany.mockResolvedValue([]);
-    const service = new WorkflowsService(prisma as unknown as PrismaService);
+    const service = new WorkflowsService(
+      prisma as unknown as PrismaService,
+      tenantPrisma as never,
+    );
 
     await expect(service.list('org-1')).resolves.toEqual([]);
 
@@ -71,15 +90,20 @@ describe('WorkflowsService', () => {
         where: { organizationId: 'org-1' },
       }),
     );
+    expect(tenantPrisma.assertOrganizationAccess).toHaveBeenCalledWith('org-1');
   });
 
   it('creates a draft definition with ordered steps and editor metadata', async () => {
     const prisma = createPrisma();
+    const tenantPrisma = createTenantPrisma();
     prisma.workflowDefinition.create.mockResolvedValue(definition);
     prisma.organizationMembership.findMany.mockResolvedValue([
       { userId: 'user-1', role: 'OWNER' },
     ]);
-    const service = new WorkflowsService(prisma as unknown as PrismaService);
+    const service = new WorkflowsService(
+      prisma as unknown as PrismaService,
+      tenantPrisma as never,
+    );
 
     await expect(
       service.create('org-1', 'user-1', {
@@ -134,6 +158,7 @@ describe('WorkflowsService', () => {
 
   it('updates only the selected tenant workflow definition status', async () => {
     const prisma = createPrisma();
+    const tenantPrisma = createTenantPrisma();
     prisma.workflowDefinition.findFirst.mockResolvedValue({
       id: 'definition-1',
       status: WorkflowDefinitionStatus.PAUSED,
@@ -149,7 +174,10 @@ describe('WorkflowsService', () => {
     ]);
     prisma.messageLog.findMany.mockResolvedValue([]);
     prisma.payment.findMany.mockResolvedValue([]);
-    const service = new WorkflowsService(prisma as unknown as PrismaService);
+    const service = new WorkflowsService(
+      prisma as unknown as PrismaService,
+      tenantPrisma as never,
+    );
 
     await expect(
       service.update('org-1', 'definition-1', 'user-1', {

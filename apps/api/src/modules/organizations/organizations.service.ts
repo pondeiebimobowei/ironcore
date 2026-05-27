@@ -10,12 +10,16 @@ import {
 } from '@prisma/client';
 import { randomBytes } from 'crypto';
 import { PrismaService } from '../database/prisma.service';
+import { TenantPrismaService } from '../database/tenant-prisma.service';
 import { SetupOrganizationDto } from './dto/setup-organization.dto';
 import { UpdateOrganizationDto } from './dto/update-organization.dto';
 
 @Injectable()
 export class OrganizationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly tenantPrisma: TenantPrismaService,
+  ) {}
 
   async setup(userId: string, dto: SetupOrganizationDto) {
     const name = dto.name?.trim();
@@ -84,6 +88,8 @@ export class OrganizationsService {
   }
 
   async getCurrent(organizationId: string) {
+    this.tenantPrisma.assertOrganizationAccess(organizationId);
+
     const organization = await this.prisma.organization.findUnique({
       where: { id: organizationId },
       select: this.organizationSelect,
@@ -97,6 +103,7 @@ export class OrganizationsService {
   }
 
   async updateCurrent(organizationId: string, dto: UpdateOrganizationDto) {
+    this.tenantPrisma.assertOrganizationAccess(organizationId);
     const current = await this.getCurrent(organizationId);
     const name = dto.name?.trim();
     const data = this.compactOrganizationData(dto);

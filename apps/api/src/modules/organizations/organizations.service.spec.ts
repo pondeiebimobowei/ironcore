@@ -8,6 +8,10 @@ import {
 import { PrismaService } from '../database/prisma.service';
 import { OrganizationsService } from './organizations.service';
 
+type ScopedArgs = {
+  where?: Record<string, unknown>;
+} & Record<string, unknown>;
+
 const createPrisma = () => {
   const tx = {
     organization: {
@@ -30,6 +34,16 @@ const createPrisma = () => {
       findFirst: jest.fn(),
     },
   } as unknown as PrismaService;
+  const tenantPrisma = {
+    assertOrganizationAccess: jest.fn(),
+    scoped: jest.fn((args: ScopedArgs) => ({
+      ...args,
+      where: {
+        ...(args.where ?? {}),
+        organizationId: 'org-1',
+      },
+    })),
+  };
 
   return {
     prisma: prisma as unknown as {
@@ -42,15 +56,17 @@ const createPrisma = () => {
         findFirst: jest.Mock;
       };
     },
+    tenantPrisma,
     tx,
   };
 };
 
 describe('OrganizationsService', () => {
   it('creates a first organization and owner membership with profile fields', async () => {
-    const { prisma, tx } = createPrisma();
+    const { prisma, tenantPrisma, tx } = createPrisma();
     const service = new OrganizationsService(
       prisma as unknown as PrismaService,
+      tenantPrisma as never,
     );
     const createdOrganization = {
       id: 'org-1',
@@ -115,12 +131,14 @@ describe('OrganizationsService', () => {
         acceptedAt: expect.any(Date),
       }),
     });
+    expect(tenantPrisma.assertOrganizationAccess).toHaveBeenCalledWith('org-1');
   });
 
   it('rejects organization setup when the user already has an active membership', async () => {
-    const { prisma } = createPrisma();
+    const { prisma, tenantPrisma } = createPrisma();
     const service = new OrganizationsService(
       prisma as unknown as PrismaService,
+      tenantPrisma as never,
     );
     prisma.organizationMembership.findFirst.mockResolvedValue({
       id: 'membership-1',
@@ -132,9 +150,10 @@ describe('OrganizationsService', () => {
   });
 
   it('updates persisted organization profile fields', async () => {
-    const { prisma } = createPrisma();
+    const { prisma, tenantPrisma } = createPrisma();
     const service = new OrganizationsService(
       prisma as unknown as PrismaService,
+      tenantPrisma as never,
     );
     prisma.organization.findUnique
       .mockResolvedValueOnce({
@@ -189,17 +208,22 @@ describe('OrganizationsService', () => {
         closedOnPublicHolidays: true,
       }),
     });
+    expect(tenantPrisma.assertOrganizationAccess).toHaveBeenCalledWith('org-1');
   });
 
   it('throws when the current organization is missing', async () => {
-    const { prisma } = createPrisma();
+    const { prisma, tenantPrisma } = createPrisma();
     const service = new OrganizationsService(
       prisma as unknown as PrismaService,
+      tenantPrisma as never,
     );
     prisma.organization.findUnique.mockResolvedValue(null);
 
     await expect(service.getCurrent('missing-org')).rejects.toBeInstanceOf(
       NotFoundException,
+    );
+    expect(tenantPrisma.assertOrganizationAccess).toHaveBeenCalledWith(
+      'missing-org',
     );
   });
 });

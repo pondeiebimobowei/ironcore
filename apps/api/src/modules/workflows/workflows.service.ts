@@ -7,6 +7,7 @@ import {
   WorkflowDefinitionStatus,
 } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
+import { TenantPrismaService } from '../database/tenant-prisma.service';
 import { CreateWorkflowDto } from './dto/create-workflow.dto';
 import { UpdateWorkflowDto } from './dto/update-workflow.dto';
 
@@ -38,12 +39,32 @@ type WorkflowMetrics = {
   recoveryRate: number;
 };
 
+type WorkflowMessageLog = Prisma.MessageLogGetPayload<{
+  select: {
+    direction: true;
+    status: true;
+    workflowStep: {
+      select: {
+        workflow: {
+          select: {
+            workflowDefinitionId: true;
+          };
+        };
+      };
+    };
+  };
+}>;
+
 @Injectable()
 export class WorkflowsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly tenantPrisma: TenantPrismaService,
+  ) {}
 
   async list(organizationId: string) {
-    const definitions = await this.findDefinitions(organizationId);
+    this.tenantPrisma.assertOrganizationAccess(organizationId);
+    const definitions = await this.findDefinitions();
     const roleByUserId = await this.findEditorRoles(
       organizationId,
       definitions,
@@ -63,6 +84,7 @@ export class WorkflowsService {
   }
 
   async create(organizationId: string, userId: string, dto: CreateWorkflowDto) {
+    this.tenantPrisma.assertOrganizationAccess(organizationId);
     const now = new Date();
     const definition = await this.prisma.workflowDefinition.create({
       data: {
@@ -107,10 +129,15 @@ export class WorkflowsService {
     userId: string,
     dto: UpdateWorkflowDto,
   ) {
-    const existing = await this.prisma.workflowDefinition.findFirst({
-      where: { id: workflowId, organizationId },
-      select: { id: true, status: true, startedAt: true },
-    });
+    this.tenantPrisma.assertOrganizationAccess(organizationId);
+    const existingQuery =
+      Prisma.validator<Prisma.WorkflowDefinitionFindFirstArgs>()({
+        where: { id: workflowId },
+        select: { id: true, status: true, startedAt: true },
+      });
+    const existing = await this.prisma.workflowDefinition.findFirst(
+      this.tenantPrisma.scoped(existingQuery),
+    );
 
     if (!existing) {
       throw new NotFoundException('Workflow not found');
@@ -143,12 +170,16 @@ export class WorkflowsService {
     );
   }
 
-  private async findDefinitions(organizationId: string) {
-    return this.prisma.workflowDefinition.findMany({
-      where: { organizationId },
+  private async findDefinitions() {
+    const query = Prisma.validator<Prisma.WorkflowDefinitionFindManyArgs>()({
+      where: {},
       include: this.definitionInclude,
       orderBy: [{ status: 'asc' }, { updatedAt: 'desc' }],
     });
+
+    return this.prisma.workflowDefinition.findMany(
+      this.tenantPrisma.scoped(query),
+    ) as Promise<WorkflowDefinitionWithRelations[]>;
   }
 
   private async findEditorRoles(
@@ -167,10 +198,12 @@ export class WorkflowsService {
       return new Map<string, string>();
     }
 
-    const memberships = await this.prisma.organizationMembership.findMany({
-      where: { organizationId, userId: { in: userIds } },
-      select: { userId: true, role: true },
-    });
+    const memberships = await this.prisma.organizationMembership.findMany(
+      this.tenantPrisma.scoped<Prisma.OrganizationMembershipFindManyArgs>({
+        where: { userId: { in: userIds } },
+        select: { userId: true, role: true },
+      }),
+    );
 
     return new Map(
       memberships.map((membership) => [membership.userId, membership.role]),
@@ -198,9 +231,8 @@ export class WorkflowsService {
     const since = new Date();
     since.setDate(since.getDate() - 7);
 
-    const messageLogs = await this.prisma.messageLog.findMany({
+    const messageLogQuery = Prisma.validator<Prisma.MessageLogFindManyArgs>()({
       where: {
-        organizationId,
         createdAt: { gte: since },
         workflowStep: {
           workflow: {
@@ -220,6 +252,9 @@ export class WorkflowsService {
         },
       },
     });
+    const messageLogs = (await this.prisma.messageLog.findMany(
+      this.tenantPrisma.scoped(messageLogQuery),
+    )) as WorkflowMessageLog[];
 
     for (const log of messageLogs) {
       const definitionId = log.workflowStep?.workflow.workflowDefinitionId;
@@ -255,15 +290,16 @@ export class WorkflowsService {
       }
     }
 
-    const payments = await this.prisma.payment.findMany({
-      where: {
-        organizationId,
-        status: PaymentStatus.VERIFIED,
-        verifiedAt: { gte: since },
-        memberId: { in: Array.from(definitionIdsByMemberId.keys()) },
-      },
-      select: { memberId: true },
-    });
+    const payments = await this.prisma.payment.findMany(
+      this.tenantPrisma.scoped<Prisma.PaymentFindManyArgs>({
+        where: {
+          status: PaymentStatus.VERIFIED,
+          verifiedAt: { gte: since },
+          memberId: { in: Array.from(definitionIdsByMemberId.keys()) },
+        },
+        select: { memberId: true },
+      }),
+    );
 
     for (const payment of payments) {
       const paymentDefinitionIds = definitionIdsByMemberId.get(

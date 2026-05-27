@@ -9,40 +9,63 @@ import {
   MembershipStatus,
   PaymentMethod,
   PaymentStatus,
+  Prisma,
   TaskStatus,
   TaskType,
   TimelineEventType,
 } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
+import { TenantPrismaService } from '../database/tenant-prisma.service';
 import { TasksService } from '../tasks/tasks.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
+
+type PaymentWithRelations = Prisma.PaymentGetPayload<{
+  include: {
+    member: true;
+    membership: {
+      include: {
+        plan: true;
+      };
+    };
+  };
+}>;
 
 @Injectable()
 export class PaymentsService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly tenantPrisma: TenantPrismaService,
     private readonly tasksService: TasksService,
   ) {}
 
   list(organizationId: string) {
-    return this.prisma.payment.findMany({
-      where: { organizationId },
-      orderBy: [{ submittedAt: 'desc' }],
-      include: {
-        member: true,
-        membership: { include: { plan: true } },
-      },
-    });
+    this.tenantPrisma.assertOrganizationAccess(organizationId);
+
+    return this.prisma.payment.findMany(
+      this.tenantPrisma.scoped<Prisma.PaymentFindManyArgs>({
+        where: {},
+        orderBy: [{ submittedAt: 'desc' }],
+        include: {
+          member: true,
+          membership: { include: { plan: true } },
+        },
+      }),
+    );
   }
 
   async get(organizationId: string, paymentId: string) {
-    const payment = await this.prisma.payment.findFirst({
-      where: { id: paymentId, organizationId },
+    this.tenantPrisma.assertOrganizationAccess(organizationId);
+    const query = Prisma.validator<Prisma.PaymentFindFirstArgs>()({
+      where: { id: paymentId },
       include: {
         member: true,
         membership: { include: { plan: true } },
       },
     });
+
+    const payment = await this.prisma.payment.findFirst(
+      this.tenantPrisma.scoped(query),
+    );
 
     if (!payment) {
       throw new NotFoundException('Payment not found');
@@ -52,8 +75,9 @@ export class PaymentsService {
   }
 
   async createPendingPayment(organizationId: string, dto: CreatePaymentDto) {
-    const member = await this.prisma.member.findFirst({
-      where: { id: dto.memberId, organizationId, deletedAt: null },
+    this.tenantPrisma.assertOrganizationAccess(organizationId);
+    const memberQuery = Prisma.validator<Prisma.MemberFindFirstArgs>()({
+      where: { id: dto.memberId, deletedAt: null },
       include: {
         memberships: {
           orderBy: { expiryDate: 'desc' },
@@ -62,6 +86,10 @@ export class PaymentsService {
       },
     });
 
+    const member = await this.prisma.member.findFirst(
+      this.tenantPrisma.scoped(memberQuery),
+    );
+
     if (!member) {
       throw new NotFoundException('Member not found');
     }
@@ -69,9 +97,11 @@ export class PaymentsService {
     const membershipId = dto.membershipId ?? member.memberships[0]?.id;
 
     if (membershipId) {
-      const membership = await this.prisma.membership.findFirst({
-        where: { id: membershipId, organizationId, memberId: member.id },
-      });
+      const membership = await this.prisma.membership.findFirst(
+        this.tenantPrisma.scoped<Prisma.MembershipFindFirstArgs>({
+          where: { id: membershipId, memberId: member.id },
+        }),
+      );
 
       if (!membership) {
         throw new NotFoundException('Membership not found');
@@ -292,9 +322,7 @@ export class PaymentsService {
     return this.get(organizationId, rejectedPayment.id);
   }
 
-  private renewalMembershipData(
-    payment: Awaited<ReturnType<PaymentsService['get']>>,
-  ) {
+  private renewalMembershipData(payment: PaymentWithRelations) {
     const previousMembership = payment.membership;
 
     if (!previousMembership) {

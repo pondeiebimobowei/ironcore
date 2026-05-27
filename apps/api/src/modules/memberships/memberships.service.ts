@@ -2,9 +2,11 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import {
   MemberStatus,
   MembershipStatus,
+  Prisma,
   TimelineEventType,
 } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
+import { TenantPrismaService } from '../database/tenant-prisma.service';
 import { TimelineService } from '../timeline/timeline.service';
 import { CreateMembershipDto } from './dto/create-membership.dto';
 import { RenewMembershipDto } from './dto/renew-membership.dto';
@@ -14,6 +16,7 @@ import { UpdateMembershipDto } from './dto/update-membership.dto';
 export class MembershipsService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly tenantPrisma: TenantPrismaService,
     private readonly timelineService: TimelineService,
   ) {}
 
@@ -22,11 +25,14 @@ export class MembershipsService {
     memberId: string,
     dto: CreateMembershipDto,
   ) {
+    this.tenantPrisma.assertOrganizationAccess(organizationId);
     const member = await this.ensureMember(organizationId, memberId);
     const plan = dto.planId
-      ? await this.prisma.plan.findFirst({
-          where: { id: dto.planId, organizationId },
-        })
+      ? await this.prisma.plan.findFirst(
+          this.tenantPrisma.scoped<Prisma.PlanFindFirstArgs>({
+            where: { id: dto.planId },
+          }),
+        )
       : null;
 
     if (dto.planId && !plan) {
@@ -86,11 +92,14 @@ export class MembershipsService {
     membershipId: string,
     dto: UpdateMembershipDto,
   ) {
+    this.tenantPrisma.assertOrganizationAccess(organizationId);
     const existing = await this.get(organizationId, membershipId);
     const plan = dto.planId
-      ? await this.prisma.plan.findFirst({
-          where: { id: dto.planId, organizationId },
-        })
+      ? await this.prisma.plan.findFirst(
+          this.tenantPrisma.scoped<Prisma.PlanFindFirstArgs>({
+            where: { id: dto.planId },
+          }),
+        )
       : null;
 
     if (dto.planId && !plan) {
@@ -130,6 +139,7 @@ export class MembershipsService {
     membershipId: string,
     dto: RenewMembershipDto,
   ) {
+    this.tenantPrisma.assertOrganizationAccess(organizationId);
     const existing = await this.get(organizationId, membershipId);
 
     await this.prisma.$transaction(async (tx) => {
@@ -172,10 +182,13 @@ export class MembershipsService {
   }
 
   private async get(organizationId: string, membershipId: string) {
-    const membership = await this.prisma.membership.findFirst({
-      where: { id: membershipId, organizationId },
+    const query = Prisma.validator<Prisma.MembershipFindFirstArgs>()({
+      where: { id: membershipId },
       include: { plan: true, member: true },
     });
+    const membership = await this.prisma.membership.findFirst(
+      this.tenantPrisma.scoped(query),
+    );
 
     if (!membership) {
       throw new NotFoundException('Membership not found');
@@ -185,10 +198,12 @@ export class MembershipsService {
   }
 
   private async ensureMember(organizationId: string, memberId: string) {
-    const member = await this.prisma.member.findFirst({
-      where: { id: memberId, organizationId, deletedAt: null },
-      select: { id: true, status: true },
-    });
+    const member = await this.prisma.member.findFirst(
+      this.tenantPrisma.scoped<Prisma.MemberFindFirstArgs>({
+        where: { id: memberId, deletedAt: null },
+        select: { id: true, status: true },
+      }),
+    );
 
     if (!member) {
       throw new NotFoundException('Member not found');
