@@ -10,6 +10,20 @@ import {
   registerGlitchTipProcessHandlers,
 } from './lib/monitoring/glitchtip';
 
+function parseAllowedOrigins() {
+  const configuredOrigins =
+    process.env.WEB_ORIGINS ??
+    process.env.WEB_ORIGIN ??
+    'http://localhost:5173';
+
+  return configuredOrigins
+    .split(/[,\s]+/)
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+}
+
+type CorsOriginCallback = (error: Error | null, allow?: boolean) => void;
+
 initGlitchTip({
   dsn: process.env.GLITCHTIP_DSN,
   environment: process.env.NODE_ENV,
@@ -20,6 +34,18 @@ registerGlitchTipProcessHandlers();
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const port = Number(process.env.API_PORT ?? process.env.PORT ?? 4000);
+  const allowedOrigins = parseAllowedOrigins();
+  const corsOrigin = (
+    origin: string | undefined,
+    callback: CorsOriginCallback,
+  ) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    callback(new Error(`Origin ${origin} is not allowed by CORS`), false);
+  };
 
   app.setGlobalPrefix('api');
   app.use(cookieParser(process.env.COOKIE_SECRET));
@@ -35,7 +61,7 @@ async function bootstrap() {
     new GlitchTipExceptionFilter(glitchTipReporter, httpAdapter.httpAdapter),
   );
   app.enableCors({
-    origin: process.env.WEB_ORIGIN ?? 'http://localhost:5173',
+    origin: corsOrigin,
     credentials: true,
   });
 
