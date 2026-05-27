@@ -5,20 +5,24 @@ import {
   TimelineEventType,
 } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
+import { TimelineService } from '../timeline/timeline.service';
 import { CreateMembershipDto } from './dto/create-membership.dto';
 import { RenewMembershipDto } from './dto/renew-membership.dto';
 import { UpdateMembershipDto } from './dto/update-membership.dto';
 
 @Injectable()
 export class MembershipsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly timelineService: TimelineService,
+  ) {}
 
   async create(
     organizationId: string,
     memberId: string,
     dto: CreateMembershipDto,
   ) {
-    await this.ensureMember(organizationId, memberId);
+    const member = await this.ensureMember(organizationId, memberId);
     const plan = dto.planId
       ? await this.prisma.plan.findFirst({
           where: { id: dto.planId, organizationId },
@@ -52,6 +56,16 @@ export class MembershipsService {
         where: { id: memberId },
         data: { status: MemberStatus.ACTIVE },
       });
+      if (member.status !== MemberStatus.ACTIVE) {
+        await this.timelineService.logMemberStatusChanged({
+          tx,
+          organizationId,
+          memberId,
+          previousStatus: member.status,
+          nextStatus: MemberStatus.ACTIVE,
+          source: 'membership_created',
+        });
+      }
       await tx.timelineEvent.create({
         data: {
           organizationId,
@@ -118,20 +132,30 @@ export class MembershipsService {
   ) {
     const existing = await this.get(organizationId, membershipId);
 
-    await this.prisma.$transaction([
-      this.prisma.membership.update({
+    await this.prisma.$transaction(async (tx) => {
+      await tx.membership.update({
         where: { id: existing.id },
         data: {
           expiryDate: new Date(dto.expiryDate),
           status: MembershipStatus.ACTIVE,
           amount: dto.amount ?? existing.amount,
         },
-      }),
-      this.prisma.member.update({
+      });
+      await tx.member.update({
         where: { id: existing.memberId },
         data: { status: MemberStatus.ACTIVE },
-      }),
-      this.prisma.timelineEvent.create({
+      });
+      if (existing.member.status !== MemberStatus.ACTIVE) {
+        await this.timelineService.logMemberStatusChanged({
+          tx,
+          organizationId,
+          memberId: existing.memberId,
+          previousStatus: existing.member.status,
+          nextStatus: MemberStatus.ACTIVE,
+          source: 'membership_renewed',
+        });
+      }
+      await tx.timelineEvent.create({
         data: {
           organizationId,
           memberId: existing.memberId,
@@ -141,8 +165,8 @@ export class MembershipsService {
             source: 'manual_renewal',
           },
         },
-      }),
-    ]);
+      });
+    });
 
     return this.get(organizationId, membershipId);
   }
@@ -163,12 +187,14 @@ export class MembershipsService {
   private async ensureMember(organizationId: string, memberId: string) {
     const member = await this.prisma.member.findFirst({
       where: { id: memberId, organizationId, deletedAt: null },
-      select: { id: true },
+      select: { id: true, status: true },
     });
 
     if (!member) {
       throw new NotFoundException('Member not found');
     }
+
+    return member;
   }
 
   private async organizationCurrency(organizationId: string) {

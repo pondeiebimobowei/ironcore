@@ -333,6 +333,7 @@ export class WorkflowsService {
           }
         : null,
       metrics,
+
       steps: definition.steps.map((step) => ({
         id: step.id,
         dayOffset: step.dayOffset,
